@@ -8,6 +8,7 @@
 library(shiny)
 library(DT)
 library(dplyr)
+library(leaflet)
 
 source('global.R')
 
@@ -17,20 +18,33 @@ shinyServer(function(input, output) {
     x <- census %>%
       filter(grepl(toupper(input$name),
                    name)) %>% 
+      filter(grepl(toupper(input$name2),
+                   name)) %>%
       filter(grepl(as.character(input$permid),
                    as.character(permid),
+                   fixed = TRUE)) %>%
+      filter(grepl(as.character(input$dob),
+                   as.character(format(dob, '%d-%m-%y')),
                    fixed = TRUE)) %>%
       dplyr::select(permid, 
                     name, 
                     dob,
                     sex,
-                    geo)
+                    geo) %>%
+      mutate(dob = format(dob, '%d-%m-%y'))
     
     x
   })
   output$text1 <-
     renderText({
       paste0(nrow(df()), ' possible matches found.')
+    })
+  
+  output$text2 <- 
+    renderText({
+      if(nrow(df()) == 1){
+        paste0(df()$permid)
+      }
     })
   
   output$table1 <-
@@ -43,6 +57,19 @@ shinyServer(function(input, output) {
         )
       }
       
+    })
+  
+  output$map1 <- 
+    renderLeaflet({
+      if(input$map){
+        x <- df()
+        leaflet(data = x) %>%
+          addTiles() %>%
+          addMarkers(lng = ~x,
+                     lat = ~y,
+                     popup = paste0(x$permid, ' ', x$name))
+        
+      }
     })
 
 })

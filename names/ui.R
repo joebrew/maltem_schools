@@ -7,6 +7,7 @@
 
 library(shiny)
 library(DT)
+library(leaflet)
 
 shinyUI(fluidPage(
 
@@ -18,15 +19,23 @@ shinyUI(fluidPage(
     sidebarPanel(
       textInput("name",
                 "Name"),
-      helpText('Type in a name, or part of a name. Capitalization does not matter. The "|" symbol means "or" in your search.'),
+      textInput("name2",
+                "Name 2"),
+      textInput('dob',
+                'dob'),
       textInput("permid",
                 "permid"),
       helpText('You can also type in a permid, or part of a permid.')),
 
     # Show a plot of the generated distribution
     mainPanel(
+      h1(textOutput('text2')),
       textOutput('text1'),
-      DT::dataTableOutput('table1')
+      DT::dataTableOutput('table1'),
+      checkboxInput('map',
+                    'show map?',
+                    value = FALSE),
+      leafletOutput('map')
     )
   )
 ))

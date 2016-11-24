@@ -146,3 +146,7 @@ census <- rbind(census_manhica, census_magude)
 rm(census_manhica, census_magude)
 
 census$sex <- census$gender
+
+library(raster)
+moz3 <- getData('GADM', country = 'MOZ', level = 3)
+man3 <- moz3[moz3@data$NAME_2 == 'Manhiça',]
