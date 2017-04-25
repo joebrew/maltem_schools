@@ -25,7 +25,6 @@ if('prepared_data.RData' %in% dir('data')){
   load('data/prepared_data.RData')
 } else {
   
-  
   #### MANHICA CENSUS
   # Get data from dssodk
   if('manhica_census_data.RData' %in% dir('data')){
@@ -258,83 +257,7 @@ if('prepared_data.RData' %in% dir('data')){
      dictionary)
   
   
-# # Get data from openhds
-  # if('open_hds_data.RData' %in% dir('data')){
-  #   load('data/open_hds_data.RData')
-  # } else {
-  #   membership <-
-  #     cism::get_data(tab = 'membership',
-  #                    dbname = 'openhds')
-  #   individual <-
-  #     cism::get_data(tab = 'individual',
-  #                    dbname = 'openhds')
-  #   location <-
-  #     cism::get_data(tab = 'location',
-  #                    dbname = 'openhds')
-  #   save(membership,
-  #        individual,
-  #        location,
-  #        file = 'data/open_hds_data.RData')
-  # }
-  # 
-  # if(!'2016-12-07_household_economics.RData' %in% dir('data')){
-  #   household_economics <- 
-  #     cism::get_data(tab = 'household_economics',
-  #                    dbname = 'dss')
-  #   save(household_economics,
-  #        file = 'data/2016-12-07_household_economics.RData')
-  # } else {
-  #   load('data/2016-12-07_household_economics.RData')
-  # }
-  # Clean up -----------------------------------
   
-  # # Remove the extra characters in invdividual.extId
-  # individual$extId <- substr(individual$extId,
-  #                            start = 1,
-  #                            stop = 9)
-  # 
-  # # Make data objects
-  # membership <- membership %>%
-  #   mutate(startDate = as.Date(startDate),
-  #          endDate = as.Date(endDate))
-  # individual$dob <- as.Date(individual$dob)
-  # 
-  # # We're going to snapshot on. So, remove
-  # # those observations that come before/after, etc.
-  # snap_shot <- as.Date('2016-05-06')
-  # membership <- membership %>%
-  #   mutate(endDate = ifelse(is.na(endDate), snap_shot, endDate)) %>%
-  #   filter(startDate <= snap_shot,
-  #          endDate >= snap_shot)
-  # 
-  # # Keep only those people as of the snap_shot date
-  # people <- membership %>%
-  #   dplyr::select(individual_uuid) %>%
-  #   left_join(individual %>%
-  #               dplyr::select(extId,
-  #                             uuid,
-  #                             dob,
-  #                             firstName,
-  #                             gender,
-  #                             lastName,
-  #                             middleName),
-  #             by = c('individual_uuid' = 'uuid')) %>%
-  #   left_join(location %>%
-  #               dplyr::select(extId,
-  #                             latitude,
-  #                             locationName,
-  #                             longitude),
-  #             by = 'extId')
-  # 
-  # # Bringing in economic data too
-  # manhica <-
-  #   people %>%
-  #   left_join(household_economics,
-  #             by = c('extId' = 'location_id'))
-  # 
-  # # Define the source
-  # manhica$src <- 'Manhiça'
-  # 
   # Magude census #################
   if('2016-12-07_HOUSEHOLD.RData' %in% dir('data')){
     load('data/2016-12-07_HOUSEHOLD.RData')
@@ -541,7 +464,6 @@ if('prepared_data.RData' %in% dir('data')){
      MEMBER,
      small_dictionary,
      sub_dictionary,
-     credentials,
      keep,
      url_of_matcher)
   
@@ -1292,11 +1214,75 @@ if('prepared_data.RData' %in% dir('data')){
      new_name,
      this_column)
   
+  # Rename name in census
+  census <-
+    census %>%
+    rename(census_name = name)
+  
+  # Create a dataset of unique student name / ids
+  students <- 
+    data_frame(name = sort(unique(c(performance$name,
+                                    ab$name))))
+  
+  # Create an id number
+  students$id <- 1:nrow(students)
+  
+  # Get the name in the census
+  students <-
+    students %>%
+    left_join(ab %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name, census_name) %>%
+                rename(census_name_ab = census_name),
+              by = 'name') %>%
+    left_join(performance %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name, census_name) %>%
+                rename(census_name_performance = census_name),
+              by = 'name')
+  
+  # Clean up names
+  students <-
+    students %>%
+    mutate(census_name = ifelse(is.na(census_name_ab), census_name_performance,
+                                ifelse(is.na(census_name_performance),
+                                       census_name_ab,
+                                       census_name_performance))) %>%
+    dplyr::select(-census_name_ab,
+                  -census_name_performance)
+  
+  # Clarify whether there is information in the census, etc.
+  students <-
+    students %>%
+    mutate(in_census = !is.na(census_name),
+           in_absenteeism = name %in% unique(ab$name),
+           in_performance = name %in% unique(performance$name),
+           in_absenteeism_2015 = name %in% unique(ab$name[ab$year == 2015]),
+           in_absenteeism_2016 = name %in% unique(ab$name[ab$year == 2016]),
+           in_performance_2015 = name %in% unique(performance$name[performance$year == 2015]),
+           in_performance_2016 = name %in% unique(performance$name[performance$year == 2016]))
+  
+  # Clean up a bit
+  ab$school <- ab$school.x; ab$school.x <- ab$school.y <- NULL
+  
+  # Remove those rows of census with no students
+  census <- 
+    census %>%
+    left_join(students %>%
+                filter(in_census) %>%
+                dplyr::select(census_name) %>%
+                mutate(keep = TRUE) %>%
+                filter(!duplicated(census_name)),
+              by = 'census_name') %>%
+    filter(!is.na(keep))
+
   save(ab,
        census,
        census_sp,
        geo,
        performance,
+       students,
        file = 'data/prepared_data.RData') 
 }
+
 
