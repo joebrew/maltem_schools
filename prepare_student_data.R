@@ -1275,14 +1275,190 @@ if('prepared_data.RData' %in% dir('data')){
                 filter(!duplicated(census_name)),
               by = 'census_name') %>%
     filter(!is.na(keep))
+  
+  # Get kilometers to school in students
+  # and remove from other places
+  ab$km_to_school <- NULL
+  performance$km_to_school <- NULL
+  students <-
+    students %>%
+    left_join(census %>%
+                dplyr::select(census_name,
+                              longitude,
+                              latitude),
+              by = 'census_name')
+  # Get school too
+  students <-
+    students %>%
+    left_join(ab %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name,
+                              school) %>%
+                rename(school_ab = school),
+              by = 'name') %>%
+    left_join(performance %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name,
+                              school) %>%
+                rename(school_performance = school),
+              by = 'name') %>%
+    mutate(school = ifelse(is.na(school_ab),
+                           school_performance,
+                           ifelse(is.na(school_performance),
+                                  school_ab,
+                                  school_ab))) %>%
+    dplyr::select(-school_performance,
+                  -school_ab)
+  
+  students$distance_to_school <- NA
+  for (i in 1:nrow(students)){
+    message(i)
+    if(!is.na(students$in_census[i])){
+      this_school <- students$school[i]
+      this_school_location <- geo %>%
+        filter(school == this_school)
+      students$distance_to_school[i] <-
+        geosphere::distVincentyEllipsoid(p1 = c(students$longitude[i], 
+                                                students$latitude[i]),
+                                         p2 = c(this_school_location$lng,
+                                                this_school_location$lat))
+    }
+  }
+
+  # Convert to km
+  students <- 
+    students %>%
+    mutate(km_to_school = distance_to_school / 1000) %>%
+    dplyr::select(-distance_to_school)
+  
+  # Get kilometers from nearest health facility
+  us <- cism::us
+  us <- us %>% filter(province == 'MAPUTO PROVINCIA',
+                      district %in% c('MAGUDE', 'MANHICA'))
+  students$km_to_health_facility <- NA
+  students$name_of_health_facility <- NA
+  
+  for (i in 1:nrow(students)){
+    message(i)
+    distances <- rep(NA, nrow(us))
+    for(j in 1:nrow(us)){
+      distances[j] <- 
+        geosphere::distVincentyEllipsoid(p1 = c(students$longitude[i], 
+                                                students$latitude[i]),
+                                         p2 = c(us$longitude[j],
+                                                us$latitude[j]))
+    }
+    # Get the minimum
+    us_index <- which.min(distances)
+    us_index <- us_index[1]
+    # Get the name and distance
+    students$km_to_health_facility[i] <- distances[us_index] / 1000
+    students$name_of_health_facility[i] <- us$name[us_index]
+  }
+  
+  # Get the district too
+  students <-
+    students %>%
+    left_join(ab %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name,
+                              district) %>%
+                rename(district_ab = district),
+              by = 'name') %>%
+    left_join(performance %>%
+                filter(!duplicated(name)) %>%
+                dplyr::select(name,
+                              district) %>%
+                rename(district_performance = district),
+              by = 'name') %>%
+    mutate(district = ifelse(is.na(district_ab),
+                           district_performance,
+                           ifelse(is.na(district_performance),
+                                  district_ab,
+                                  district_ab))) %>%
+    dplyr::select(-district_performance,
+                  -district_ab)
+  
+  # Get the distance to other district
+  students$km_to_other_district_student <- NA
+  students$km_to_other_district_school <- NA
+  mag2 <- cism::mag2
+  man2 <- cism::man2
+  
+  for (i in 1:nrow(students)){
+    message(i)
+    
+    # Get the school
+    this_school <- students$school[i]
+    this_geo <- geo %>% filter(school == this_school)
+    
+    # Get location of student
+    location_student <- c(students$longitude[i],
+                          students$latitude[i])
+    
+    # Get the location of the school
+    location_school <- c(this_geo$lng, this_geo$lat)
+    
+    # Get the district
+    this_district <- students$district[i]
+    the_other_district <- ifelse(this_district == 'Magude',
+                                 'Manhiça', 'Magude')
+    if(the_other_district == 'Magude'){
+      the_other_polygon <- mag2
+    } else {
+      the_other_polygon <- man2
+    }
+
+    # Get the distance to the line for the student
+    if(all(!is.na(location_student))){
+      distance_student <- 
+        as.numeric(geosphere::dist2Line(p = location_student, 
+                                        line = the_other_polygon)[,1]) / 1000
+      
+      students$km_to_other_district_student[i] <- distance_student
+    }
+    
+    # Get the distance to the line for the school
+    distance_school <- 
+      as.numeric(geosphere::dist2Line(p = location_school, 
+                                      line = the_other_polygon)[,1]) / 1000
+    
+    students$km_to_other_district_school[i] <- distance_school
+  }
+  
+  # Bring id into the other datasets
+  ab <-
+    left_join(ab,
+              students %>%
+                dplyr::select(name, id),
+              by = 'name')
+  performance <-
+    left_join(performance,
+              students %>%
+                dplyr::select(name, id),
+              by = 'name')
+  
+  # Combine students and census (and just get rid of census)
+  students <- 
+    left_join(students,
+              census %>%
+                rename(district_census = district) %>%
+                dplyr::select(-longitude,
+                              -latitude),
+              by = 'census_name')
+  rm(census)
 
   save(ab,
-       census,
-       census_sp,
        geo,
        performance,
        students,
        file = 'data/prepared_data.RData') 
+  
+  # Write csv
+  write_csv(ab, 'outputs/ab.csv')
+  write_csv(geo, 'outputs/geo.csv')
+  write_csv(performance, 'outputs/performance.csv')
+  write_csv(students, 'outputs/students.csv')
 }
 
 
