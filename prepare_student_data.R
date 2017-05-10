@@ -78,6 +78,7 @@ if('prepared_data.RData' %in% dir('data')){
   INDIVIDUAL_DETAILS_CORE <-
     INDIVIDUAL_DETAILS_CORE %>%
     dplyr::select(LOCATION_ID,
+                  PERM_ID,
                   DOB,
                   NAME,
                   GENDER,
@@ -332,6 +333,11 @@ if('prepared_data.RData' %in% dir('data')){
   # Define the source
   magude$district <- 'Magude'
   
+  # Rename perm id
+  magude <-
+    magude %>%
+    rename(PERM_ID = PERM_ID_MEMBER)
+  
   # Rename those columns to match the ones in manhica census
   
   url_of_matcher <- 
@@ -366,7 +372,7 @@ if('prepared_data.RData' %in% dir('data')){
                         ifelse(sex == 2, 'F',
                                NA))) 
   
-  # rename a few columns
+  # rename a few more columns
   manhica_people <- manhica_people %>%
     mutate(dob = as.Date(DOB)) %>%
     mutate(sex = ifelse(GENDER == 'male', 'M',
@@ -375,8 +381,12 @@ if('prepared_data.RData' %in% dir('data')){
     mutate(latitude = as.numeric(as.character(latitude)),
            longitude = as.numeric(as.character(longitude)))
   
+  # Lowercase permid in both places
+  manhica_people$perm_id <- manhica_people$PERM_ID
+  magude$perm_id <- magude$PERM_ID
   # Define which columns to keep
   keep <- c('name',
+            'perm_id',
             'sex',
             'dob',
             'district',
@@ -439,12 +449,13 @@ if('prepared_data.RData' %in% dir('data')){
                            n_pigs))
   
   # Keep only those who are between 5 and 15 years old
+  # for the purposes of matching with students
+  census_all <- census
   census <- 
     census %>%
-    filter(dob <= '2010-01-01',
+    filter(dob <= '2012-01-01',
            dob >= '2000-01-01')
-  
-  
+
   # Make a spatial version too
   census_sp <- 
     census %>%
@@ -470,8 +481,10 @@ if('prepared_data.RData' %in% dir('data')){
   #######
   # PERFORMANCE
   #######
-  performance <- 
-    read_csv("data/EXCEL_Pauta_frecuencia_2017-04-13-090813462_modified_by_joe.csv")
+  # performance <- 
+    # read_csv("data/EXCEL_Pauta_frecuencia_2017-04-13-090813462_modified_by_joe.csv")
+  performance <-
+    read_csv('data/Pautas_2017-05-09.csv')
   
   # Clean up
   performance$school <- performance$`Study Subject ID`
@@ -684,8 +697,9 @@ if('prepared_data.RData' %in% dir('data')){
   
   # ab <- read_tsv('data/TAB_Joe_Brew_all_data_2017-02-23-081532631.tsv',
   #                skip = 13)
-  ab <- read_csv('data/EXCEL_Mapa_de_Faltas_2017-04-20-103450493_modified_by_joe.csv',
-                 skip = 0)
+  # ab <- read_csv('data/EXCEL_Mapa_de_Faltas_2017-04-20-103450493_modified_by_joe.csv',
+  #                skip = 0)
+  ab <- read_csv('data/Mapa_de_Faltas_2017-05-09.csv')
   
   # Remove those with no name
   ab <- ab[,!is.na(names(ab))]
@@ -1147,12 +1161,12 @@ if('prepared_data.RData' %in% dir('data')){
   }
   df_names$km <- df_names$distance_to_school / 1000
   
-  View(df_names %>%
-         dplyr::select(name,
-                       census_name,
-                       confidence_score,
-                       km) %>%
-         arrange(confidence_score, km)) 
+  # View(df_names %>%
+  #        dplyr::select(name,
+  #                      census_name,
+  #                      confidence_score,
+  #                      km) %>%
+  #        arrange(confidence_score, km)) 
   
   
   # Manually review the matches, and define rules
@@ -1448,7 +1462,24 @@ if('prepared_data.RData' %in% dir('data')){
               by = 'census_name')
   rm(census)
 
+  # Having now matched, get the census for everyone
+  census <- census_all
+  rm(census_all)
+  
+  # Get agregado-level data for census
+  census <- census %>%
+    mutate(agregado = substr(perm_id, 1, 8))
+  census <- census %>%
+    left_join(census %>%
+                group_by(agregado) %>%
+                  summarise(n_residents_of_agregado = n(),
+                            jobs_in_agregado = paste0(sort(unique(job)), collapse = ', '),
+                            n_adults_agregado = length(which(dob <= '1999-01-01')),
+                            n_children_agregado = length(which(dob > '1999-01-01'))),
+              by = 'agregado')
+
   save(ab,
+       census,
        geo,
        performance,
        students,
@@ -1456,6 +1487,7 @@ if('prepared_data.RData' %in% dir('data')){
   
   # Write csv
   write_csv(ab, 'outputs/ab.csv')
+  write_csv(census, 'outputs/census.csv')
   write_csv(geo, 'outputs/geo.csv')
   write_csv(performance, 'outputs/performance.csv')
   write_csv(students, 'outputs/students.csv')
