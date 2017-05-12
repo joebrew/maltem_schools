@@ -1,0 +1,11 @@
+wall_material	wall_material_category	wall_material_points
+Adobe block	6	8,57
+Aluminum/carbon/paper/bag/shell	2	2,86
+Bamboo/palm/cane	1	1,43
+Brick blocks	4	5,71
+Concrete blocks	7	10,00
+Others	NA	
+Pau maticado	3	4,29
+Wood	5	7,14
+Wood / zinc	4	5,71
+Zinc	4	5,71

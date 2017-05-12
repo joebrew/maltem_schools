@@ -1,0 +1,28 @@
+job	job_category	job_points
+Carpenter / Electrician	2	10
+coal worker/lumberjack	1	5
+Disabled	0	0
+Doesn't work	0	0
+Farmer	1	5
+Fisherman	1	5
+Guard/Security	1	5
+Health professional	2	10
+Housekeeper	1	5
+Locksmith / Mason	1	5
+Maragra sugarcane worker	1	5
+Merchant	1	5
+Militar/Policy	2	10
+Miner	1	5
+moving sales people	1	5
+non moving sales people	1	5
+Others	NA	NA
+Religious	2	10
+Retired/pensioner	0	0
+RSA miner	1	5
+RSA workers	1	5
+Student	0	0
+Teacher	2	10
+Vendedores ambulantes	1	5
+Vendedores fixos	2	10
+Volunteer	0	0
+Xinavane sugarcane worker	1	5

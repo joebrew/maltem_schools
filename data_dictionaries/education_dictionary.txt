@@ -1,0 +1,17 @@
+education	education_category	education_points
+10th grade or equivalent	4	3.33
+12th grade or equivalent	5	4.17
+5th grade	2	1.67
+7th grade	3	2.50
+Analphabet	0	0.00
+Bachelor	9	7.50
+Basic technical education	7	5.83
+Below 5th grade	1	0.83
+Doctorate	12	10.00
+doesn't know	0	0.00
+Elementary Technical Education	6	5.00
+Graduate	10	8.33
+Masters	11	9.17
+Others	NA	
+refuses	NA	
+Secondary Technical Education	8	6.67

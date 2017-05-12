@@ -1477,6 +1477,143 @@ if('prepared_data.RData' %in% dir('data')){
                             n_adults_agregado = length(which(dob <= '1999-01-01')),
                             n_children_agregado = length(which(dob > '1999-01-01'))),
               by = 'agregado')
+  
+  
+  dictionaries <- dir('data_dictionaries/')
+  dictionaries <- dictionaries[grepl('dictionary.txt', dictionaries)]
+  for (i in 1:length(dictionaries)){
+    this_file <- dictionaries[i]
+    this_name <- gsub('.txt', '', this_file)
+    assign(this_name,
+           read_delim(paste0('data_dictionaries/', this_file), 
+                      delim = '\t'))
+  }
+  
+  # Define the variables that need modifying
+  # - Each of the 12 variables' answers have received a puntuation that can go from 0 to 10 (please, first check that out, any variable should be pointed more than 10!). 
+  # - After we have assigned a different puntuation to each answer, we then need to sum all the points for each household (for all the 12 variables), but ponderate each of the variables according to the criteria defined in the document "weights". 
+  variables <- gsub('_dictionary.txt', '', dictionaries)
+  variables[variables == 'educ'] <- 'education'
+  
+  # Loop through each variable, creating a scored one
+  # for (j in 1:length(variables)){
+  for (j in 1:length(variables)){
+    this_variable <- variables[j]
+    these_data <- census %>%
+      dplyr::select_(this_variable)
+    this_dictionary <- get(paste0(this_variable, '_dictionary'))
+    # Join with the dictionary
+    out <- 
+      left_join(these_data,
+                this_dictionary) 
+    out <- out[,2:ncol(out)]
+    # Bind to census
+    census <- cbind(census, out)
+    rm(list = paste0(this_variable, '_dictionary'))
+  }
+  rm(these_data, out)
+  
+  # Read in the weights
+  weights <- read_delim('data_dictionaries/weights.txt',
+                        delim = '\t')
+  
+  # Create an ses_asset_score
+  census <- census %>%
+    mutate(ses_asset_score = 
+             (ifelse(is.na(n_bikes), mean(n_bikes, na.rm = TRUE), n_bikes) * 80) +
+             (ifelse(is.na(n_cars), mean(n_cars, na.rm = TRUE), n_cars) * 4000) +
+             (ifelse(is.na(n_chickens), mean(n_chickens, na.rm = TRUE), n_chickens) * 7) +
+             (ifelse(is.na(n_cows), mean(n_cows, na.rm = TRUE), n_cows) * 80) +
+             (ifelse(is.na(n_ducks), mean(n_ducks, na.rm = TRUE), n_ducks) * 12) +
+             (ifelse(is.na(has_freezer), mean(has_freezer == 'yes', na.rm = TRUE), has_freezer == 'yes') * 150) +
+             (ifelse(is.na(has_glacier), mean(has_glacier == 'yes', na.rm = TRUE), has_glacier == 'yes') * 120) +
+             (ifelse(is.na(n_goats), mean(n_goats, na.rm = TRUE), n_goats) * 30) +
+             (ifelse(is.na(n_moto), mean(n_moto, na.rm = TRUE), n_moto) * 400) +
+             (ifelse(is.na(n_pigs), mean(n_pigs, na.rm = TRUE), n_pigs) * 60) +
+             (ifelse(is.na(has_tractor), mean(has_tractor == 'yes', na.rm = TRUE), has_tractor == 'yes') * 2000) +
+             (ifelse(is.na(has_tv), mean(has_tv == 'yes', na.rm = TRUE), has_tv == 'yes') * 150))
+  
+  # Create an ses_conditions_score
+  census <- 
+    census %>%
+    mutate(ses_conditions_score = 
+             (ifelse(is.na(coverage_material_points),
+                     mean(coverage_material_points, na.rm = TRUE),
+                     coverage_material_points) *
+                weights$weight[weights$variables_household_conditions == 'coverage_material']) +
+             (ifelse(is.na(floor_material_points),
+                     mean(floor_material_points, na.rm = TRUE),
+                     floor_material_points) *
+                weights$weight[weights$variables_household_conditions == 'floor_material']) +
+             (ifelse(is.na(fuel_for_cooking_points),
+                     mean(fuel_for_cooking_points, na.rm = TRUE),
+                     fuel_for_cooking_points) *
+                weights$weight[weights$variables_household_conditions == 'fuel_for_cooking']) +
+             (ifelse(is.na(fuel_for_lighting_points),
+                     mean(fuel_for_lighting_points, na.rm = TRUE),
+                     fuel_for_lighting_points) *
+                weights$weight[weights$variables_household_conditions == 'fuel_for_lighting']) +
+             (ifelse(is.na(has_kitchen_points),
+                     mean(has_kitchen_points, na.rm = TRUE),
+                     has_kitchen_points) *
+                weights$weight[weights$variables_household_conditions == 'has_kitchen']) +
+             (ifelse(is.na(is_kitchen_covered_points),
+                     mean(is_kitchen_covered_points, na.rm = TRUE),
+                     is_kitchen_covered_points) *
+                weights$weight[weights$variables_household_conditions == 'is_kitchen_covered']) +
+             (ifelse(is.na(is_kitchen_inside_points),
+                     mean(is_kitchen_inside_points, na.rm = TRUE),
+                     is_kitchen_inside_points) *
+                weights$weight[weights$variables_household_conditions == 'is_kitchen_inside']) +
+             (ifelse(is.na(latrine_type_points),
+                     mean(latrine_type_points, na.rm = TRUE),
+                     latrine_type_points) *
+                weights$weight[weights$variables_household_conditions == 'latrine_type']) +
+             (ifelse(is.na(n_constructions_points),
+                     mean(n_constructions_points, na.rm = TRUE),
+                     n_constructions_points) *
+                weights$weight[weights$variables_household_conditions == 'n_constructions']) +
+             (ifelse(is.na(n_house_divisions_points),
+                     mean(n_house_divisions_points, na.rm = TRUE),
+                     n_house_divisions_points) *
+                weights$weight[weights$variables_household_conditions == 'n_house_divisions']) +
+             (ifelse(is.na(wall_material_points),
+                     mean(wall_material_points, na.rm = TRUE),
+                     wall_material_points) *
+                weights$weight[weights$variables_household_conditions == 'wall_material']) +
+             (ifelse(is.na(water_source_points),
+                     mean(water_source_points, na.rm = TRUE),
+                     water_source_points) *
+                weights$weight[weights$variables_household_conditions == 'water_source']))
+  
+  # Make a human capital score (education + job)
+  human_capital <-
+    census %>%
+    group_by(agregado) %>%
+    summarise(education_points = max(as.numeric(education_points),
+                                     na.rm = TRUE),
+              job_points = max(as.numeric(job_points),
+                               na.rm = TRUE)) %>%
+    ungroup %>%
+    mutate(education_points = ifelse(is.infinite(education_points),
+                                     NA,
+                                     education_points),
+           job_points = ifelse(is.infinite(job_points),
+                               NA,
+                               job_points)) %>%
+    mutate(job_points = ifelse(is.na(job_points),
+                               mean(job_points, na.rm = TRUE),
+                               job_points),
+           education_points = ifelse(is.na(education_points),
+                                     mean(education_points, na.rm = TRUE),
+                                     education_points)) %>%
+    rename(ses_occupation_household = job_points,
+           ses_education_household = education_points)
+  
+  # Join to census
+  census <- left_join(x = census,
+                      y = human_capital,
+                      by = 'agregado')
 
   save(ab,
        census,

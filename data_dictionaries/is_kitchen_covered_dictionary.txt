@@ -1,0 +1,4 @@
+is_kitchen_covered	is_kitchen_covered_category	is_kitchen_covered_points
+no	0	0
+refuses	NA	NA
+yes	1	10

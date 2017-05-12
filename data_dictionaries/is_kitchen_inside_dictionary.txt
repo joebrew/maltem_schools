@@ -1,0 +1,4 @@
+is_kitchen_inside	is_kitchen_inside_category	is_kitchen_inside_points
+no	0	0
+refuses	NA	NA
+yes	1	10

@@ -1,0 +1,4 @@
+has_kitchen	has_kitchen_category	has_kitchen_points
+no	0	0
+refuses	NA	NA
+yes	1	10

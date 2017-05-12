@@ -1,0 +1,8 @@
+fuel_for_cooking	fuel_for_cooking_category	fuel_for_cooking_points
+Any	0	0
+Coal	2	4
+Electricity	5	10
+Firewood	1	2
+Gas	4	8
+Others	NA	NA
+Petrol	3	6

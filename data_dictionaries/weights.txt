@@ -1,0 +1,13 @@
+variables_household_conditions	weight
+coverage_material	10
+floor_material	5
+fuel_for_cooking	5
+fuel_for_lighting	10
+has_kitchen	10
+is_kitchen_covered	5
+is_kitchen_inside	5
+latrine_type	10
+n_constructions	10
+n_house_divisions	10
+wall_material	10
+water_source	10

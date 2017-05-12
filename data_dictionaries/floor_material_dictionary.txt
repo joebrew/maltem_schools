@@ -1,0 +1,8 @@
+floor_material	floor_material_category	floor_material_points
+Adobe	1	2
+Cement	2	4
+Marble / Granulite	5	10
+Mosaic / Hardboard	4	8
+Others	NA	NA
+Without	0	0
+Wood	3	6

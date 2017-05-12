@@ -1,0 +1,8 @@
+latrine_type	latrine_type_category	latrine_type_points
+Improved latrine	2	5
+Latrine with unventilated slab	3	7,5
+Toilet connected to the septic tank	4	10
+Traditional latrine	1	2,5
+Unimproved latrine	1	2,5
+Ventilated latrine	2	5
+Without latrine	0	0

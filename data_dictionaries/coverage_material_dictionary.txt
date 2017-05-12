@@ -1,0 +1,7 @@
+coverage_material	coverage_material_category	coverage_material_points
+Concrete slab	4	8
+Grass / Palm	1	2
+Lusalite metal sheet	3	6
+Others	NA	NA
+Roof tile	5	10
+Zinc sheet	2	4

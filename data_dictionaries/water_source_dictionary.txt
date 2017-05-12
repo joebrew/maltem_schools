@@ -1,0 +1,13 @@
+water_source	water_source_category	water_source_points
+Fontenary	5	7,14
+Others	NA	NA
+Piped water in the house	7	10,00
+Piped water in the yard	6	8,57
+Protected hole with manual pump	3	4,29
+Protected well	4	5,71
+Rainwater	1	1,43
+Unprotected well	3	4,29
+Water captured directly from the river / lake / lagoon	1	1,43
+Well along river/lake/lagoon	2	2,86
+Well far from river/lake/lagoon	3	4,29
+		
