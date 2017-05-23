@@ -40,9 +40,9 @@ if('prepared_data.RData' %in% dir('data')){
     LOCATION_DETAILS_CORE <-
       cism::get_data(tab = 'LOCATION_DETAILS_CORE',
                      dbname = 'dssodk')
-      location <-
-        cism::get_data(tab = 'location',
-                       dbname = 'openhds')
+    location <-
+      cism::get_data(tab = 'location',
+                     dbname = 'openhds')
     save(HOUSEHOLD_ECONOMICS_CORE,
          INDIVIDUAL_DETAILS_CORE,
          LOCATION_DETAILS_CORE,
@@ -60,7 +60,7 @@ if('prepared_data.RData' %in% dir('data')){
   
   # Get smaller data
   LOCATION_DETAILS_CORE <- 
-  LOCATION_DETAILS_CORE %>%
+    LOCATION_DETAILS_CORE %>%
     dplyr::select(LOCATION_ID,
                   COVERAGE_MATERIAL,
                   FLOOR_MATERIAL,
@@ -366,8 +366,8 @@ if('prepared_data.RData' %in% dir('data')){
   # Rename a few colunns in magude
   magude <-
     magude %>%
-  rename(name = MEMBER_NAME,
-         sex = MEMBER_GENDER) %>%
+    rename(name = MEMBER_NAME,
+           sex = MEMBER_GENDER) %>%
     mutate(sex = ifelse(sex == 1, 'M', 
                         ifelse(sex == 2, 'F',
                                NA))) 
@@ -455,7 +455,7 @@ if('prepared_data.RData' %in% dir('data')){
     census %>%
     filter(dob <= '2012-01-01',
            dob >= '2000-01-01')
-
+  
   # Make a spatial version too
   census_sp <- 
     census %>%
@@ -465,7 +465,7 @@ if('prepared_data.RData' %in% dir('data')){
            y = latitude)
   coordinates(census_sp) <- ~x+y
   proj4string(census_sp) <- proj4string(man3)
-
+  
   # Remove unecessary objects
   rm(dictionary,
      HOUSEHOLD,
@@ -482,7 +482,7 @@ if('prepared_data.RData' %in% dir('data')){
   # PERFORMANCE
   #######
   # performance <- 
-    # read_csv("data/EXCEL_Pauta_frecuencia_2017-04-13-090813462_modified_by_joe.csv")
+  # read_csv("data/EXCEL_Pauta_frecuencia_2017-04-13-090813462_modified_by_joe.csv")
   performance <-
     read_csv('data/Pautas_2017-05-09.csv')
   
@@ -1338,7 +1338,7 @@ if('prepared_data.RData' %in% dir('data')){
                                                 this_school_location$lat))
     }
   }
-
+  
   # Convert to km
   students <- 
     students %>%
@@ -1386,10 +1386,10 @@ if('prepared_data.RData' %in% dir('data')){
                 rename(district_performance = district),
               by = 'name') %>%
     mutate(district = ifelse(is.na(district_ab),
-                           district_performance,
-                           ifelse(is.na(district_performance),
-                                  district_ab,
-                                  district_ab))) %>%
+                             district_performance,
+                             ifelse(is.na(district_performance),
+                                    district_ab,
+                                    district_ab))) %>%
     dplyr::select(-district_performance,
                   -district_ab)
   
@@ -1422,7 +1422,7 @@ if('prepared_data.RData' %in% dir('data')){
     } else {
       the_other_polygon <- man2
     }
-
+    
     # Get the distance to the line for the student
     if(all(!is.na(location_student))){
       distance_student <- 
@@ -1461,7 +1461,7 @@ if('prepared_data.RData' %in% dir('data')){
                               -latitude),
               by = 'census_name')
   rm(census)
-
+  
   # Having now matched, get the census for everyone
   census <- census_all
   rm(census_all)
@@ -1472,10 +1472,10 @@ if('prepared_data.RData' %in% dir('data')){
   census <- census %>%
     left_join(census %>%
                 group_by(agregado) %>%
-                  summarise(n_residents_of_agregado = n(),
-                            jobs_in_agregado = paste0(sort(unique(job)), collapse = ', '),
-                            n_adults_agregado = length(which(dob <= '1999-01-01')),
-                            n_children_agregado = length(which(dob > '1999-01-01'))),
+                summarise(n_residents_of_agregado = n(),
+                          jobs_in_agregado = paste0(sort(unique(job)), collapse = ', '),
+                          n_adults_agregado = length(which(dob <= '1999-01-01')),
+                          n_children_agregado = length(which(dob > '1999-01-01'))),
               by = 'agregado')
   
   
@@ -1614,7 +1614,27 @@ if('prepared_data.RData' %in% dir('data')){
   census <- left_join(x = census,
                       y = human_capital,
                       by = 'agregado')
-
+  
+  # remove duplicates
+  ab <- ab %>%
+    mutate(dummy = 1) %>%
+    arrange(date, name, district) %>%
+    group_by(date, name, district) %>%
+    mutate(cs_dummy = cumsum(dummy)) %>%
+    ungroup %>%
+    filter(cs_dummy == 1)
+  ab <- ab %>% dplyr::select(-dummy, -cs_dummy)
+  
+  # Clean up name in census
+  census <-
+    census %>%
+    rename(census_name = name)
+  
+  # Remove duplicates in students
+  students <-
+    students %>%
+    filter(!duplicated(name))
+  
   save(ab,
        census,
        geo,
@@ -1630,4 +1650,36 @@ if('prepared_data.RData' %in% dir('data')){
   write_csv(students, 'outputs/students.csv')
 }
 
-
+# Define function for date truncation
+date_truncate <- 
+  function (date_object, level = c("month", "quarter", "year")) 
+  {
+    if (is.null(level)) {
+      stop("You must provide a level argument of either \"month\", \"quarter\" or \"year\".")
+    }
+    date_object <- as.Date(date_object)
+    if (sum(!is.na(date_object)) == 0) {
+      return(date_object)
+    }
+    if (level == "month") {
+      return_object <- date_object
+      return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                    "%Y-%m"), "-01"))
+      return(return_object)
+    }
+    if (level == "quarter") {
+      q_month <- (((((as.numeric(format(date_object, "%m"))) - 
+                       1)%/%3) + 1) * 3) - 2
+      return_object <- date_object
+      return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                    "%Y"), ifelse(nchar(q_month[!is.na(return_object)]) == 
+                                                                                    2, "-", "-0"), q_month, "-01"))
+      return(return_object)
+    }
+    if (level == "year") {
+      return_object <- date_object
+      return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                    "%Y"), "-01-01"))
+      return(return_object)
+    }
+  }

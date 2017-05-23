@@ -9,177 +9,321 @@ library(RColorBrewer)
 library(waffle)
 library(gganimate)
 
-# # Read in some dictionaries
-# job_dictionary <- read_delim('data_dictionaries/job_dictionary.txt',
-#                              delim = '\t')
+# Make table comparing manhica and magude
+x <- students %>%
+  left_join(census %>%
+              filter(!duplicated(perm_id)))
+
+# Get info on sex, age, etc.
+y <- x %>%
+  mutate(district = factor(district, levels = c('Manhiça', 'Magude'))) %>%
+  group_by(district) %>%
+  mutate(age = (as.numeric(as.Date('2016-01-01') - dob)) / 365.25) %>%
+  summarise(males = length(which(sex == 'M')),
+            females = length(which(sex == 'F')),
+            distance_to_school_mean = mean(km_to_school, na.rm = TRUE),
+            distance_to_school_sd = sd(km_to_school, na.rm = TRUE),
+            siblings_mean = mean(n_children_agregado, na.rm = TRUE),
+            siblings_sd = sd(n_children_agregado, na.rm = TRUE),
+            education_mean = mean(ses_education_household, na.rm = TRUE),
+            education_sd = sd(ses_education_household, na.rm = TRUE),
+            age_mean = mean(age, na.rm = TRUE),
+            age_sd = sd(age, na.rm = TRUE),
+            conditions_score_mean = mean(ses_conditions_score, na.rm = TRUE),
+            conditions_score_sd = sd(ses_conditions_score, na.rm = TRUE),
+            ses_asset_score_mean = mean(ses_asset_score, na.rm = TRUE),
+            ses_asset_score_sd = sd(ses_asset_score, na.rm = TRUE),
+            identified = length(which(!is.na(district_census))),
+            n = n())  %>%
+  mutate(p_identified = identified / n * 100)
+
 # 
-# education_dictionary <- read_delim('data_dictionaries/educ_dictionary.txt',
-#                              delim = '\t')
-
-dictionaries <- dir('data_dictionaries/')
-dictionaries <- dictionaries[grepl('dictionary.txt', dictionaries)]
-for (i in 1:length(dictionaries)){
-  this_file <- dictionaries[i]
-  this_name <- gsub('.txt', '', this_file)
-  assign(this_name,
-         read_delim(paste0('data_dictionaries/', this_file), 
-                    delim = '\t'))
-}
-
-# Define the variables that need modifying
-# - Each of the 12 variables' answers have received a puntuation that can go from 0 to 10 (please, first check that out, any variable should be pointed more than 10!). 
-# - After we have assigned a different puntuation to each answer, we then need to sum all the points for each household (for all the 12 variables), but ponderate each of the variables according to the criteria defined in the document "weights". 
-variables <- gsub('_dictionary.txt', '', dictionaries)
-variables[variables == 'educ'] <- 'education'
-
-# Loop through each variable, creating a scored one
-# for (j in 1:length(variables)){
-for (j in 1:length(variables)){
-  this_variable <- variables[j]
-  these_data <- census %>%
-    dplyr::select_(this_variable)
-  this_dictionary <- get(paste0(this_variable, '_dictionary'))
-  # Join with the dictionary
-  out <- 
-    left_join(these_data,
-              this_dictionary) 
-  out <- out[,2:ncol(out)]
-  # Bind to census
-  census <- cbind(census, out)
-  rm(list = paste0(this_variable, '_dictionary'))
-}
-rm(these_data, out)
-
-# Read in the weights
-weights <- read_delim('data_dictionaries/weights.txt',
-                      delim = '\t')
-
-# Create an ses_asset_score
-census <- census %>%
-  mutate(ses_asset_score = 
-           (ifelse(is.na(n_bikes), mean(n_bikes, na.rm = TRUE), n_bikes) * 80) +
-           (ifelse(is.na(n_cars), mean(n_cars, na.rm = TRUE), n_cars) * 4000) +
-           (ifelse(is.na(n_chickens), mean(n_chickens, na.rm = TRUE), n_chickens) * 7) +
-           (ifelse(is.na(n_cows), mean(n_cows, na.rm = TRUE), n_cows) * 80) +
-           (ifelse(is.na(n_ducks), mean(n_ducks, na.rm = TRUE), n_ducks) * 12) +
-           (ifelse(is.na(has_freezer), mean(has_freezer == 'yes', na.rm = TRUE), has_freezer == 'yes') * 150) +
-           (ifelse(is.na(has_glacier), mean(has_glacier == 'yes', na.rm = TRUE), has_glacier == 'yes') * 120) +
-           (ifelse(is.na(n_goats), mean(n_goats, na.rm = TRUE), n_goats) * 30) +
-           (ifelse(is.na(n_moto), mean(n_moto, na.rm = TRUE), n_moto) * 400) +
-           (ifelse(is.na(n_pigs), mean(n_pigs, na.rm = TRUE), n_pigs) * 60) +
-           (ifelse(is.na(has_tractor), mean(has_tractor == 'yes', na.rm = TRUE), has_tractor == 'yes') * 2000) +
-           (ifelse(is.na(has_tv), mean(has_tv == 'yes', na.rm = TRUE), has_tv == 'yes') * 150))
-
-# Create an ses_conditions_score
-census <- 
-  census %>%
-  mutate(ses_conditions_score = 
-           (ifelse(is.na(coverage_material_points),
-                  mean(coverage_material_points, na.rm = TRUE),
-                  coverage_material_points) *
-              weights$weight[weights$variables_household_conditions == 'coverage_material']) +
-           (ifelse(is.na(floor_material_points),
-                   mean(floor_material_points, na.rm = TRUE),
-                   floor_material_points) *
-              weights$weight[weights$variables_household_conditions == 'floor_material']) +
-           (ifelse(is.na(fuel_for_cooking_points),
-                   mean(fuel_for_cooking_points, na.rm = TRUE),
-                   fuel_for_cooking_points) *
-              weights$weight[weights$variables_household_conditions == 'fuel_for_cooking']) +
-           (ifelse(is.na(fuel_for_lighting_points),
-                   mean(fuel_for_lighting_points, na.rm = TRUE),
-                   fuel_for_lighting_points) *
-              weights$weight[weights$variables_household_conditions == 'fuel_for_lighting']) +
-           (ifelse(is.na(has_kitchen_points),
-                   mean(has_kitchen_points, na.rm = TRUE),
-                   has_kitchen_points) *
-              weights$weight[weights$variables_household_conditions == 'has_kitchen']) +
-           (ifelse(is.na(is_kitchen_covered_points),
-                   mean(is_kitchen_covered_points, na.rm = TRUE),
-                   is_kitchen_covered_points) *
-              weights$weight[weights$variables_household_conditions == 'is_kitchen_covered']) +
-           (ifelse(is.na(is_kitchen_inside_points),
-                   mean(is_kitchen_inside_points, na.rm = TRUE),
-                   is_kitchen_inside_points) *
-              weights$weight[weights$variables_household_conditions == 'is_kitchen_inside']) +
-           (ifelse(is.na(latrine_type_points),
-                   mean(latrine_type_points, na.rm = TRUE),
-                   latrine_type_points) *
-              weights$weight[weights$variables_household_conditions == 'latrine_type']) +
-           (ifelse(is.na(n_constructions_points),
-                   mean(n_constructions_points, na.rm = TRUE),
-                   n_constructions_points) *
-              weights$weight[weights$variables_household_conditions == 'n_constructions']) +
-           (ifelse(is.na(n_house_divisions_points),
-                   mean(n_house_divisions_points, na.rm = TRUE),
-                   n_house_divisions_points) *
-              weights$weight[weights$variables_household_conditions == 'n_house_divisions']) +
-           (ifelse(is.na(wall_material_points),
-                   mean(wall_material_points, na.rm = TRUE),
-                   wall_material_points) *
-              weights$weight[weights$variables_household_conditions == 'wall_material']) +
-           (ifelse(is.na(water_source_points),
-                   mean(water_source_points, na.rm = TRUE),
-                   water_source_points) *
-              weights$weight[weights$variables_household_conditions == 'water_source']))
-           
-# Make a human capital score (education + job)
-human_capital <-
-  census %>%
-  group_by(agregado) %>%
-  summarise(education_points = max(as.numeric(education_points),
-                                   na.rm = TRUE),
-            job_points = max(as.numeric(job_points),
-                             na.rm = TRUE)) %>%
+# Plots by these risk factors
+x <- ab %>%
+  filter(!is.na(year_term)) %>%
+  filter(!grepl('NA', year_term)) %>%
+  left_join(census %>%
+              mutate(census_name = name) %>%
+              dplyr::select(census_name, sex)) %>%
+  group_by(sex, year_term) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
   ungroup %>%
-  mutate(education_points = ifelse(is.infinite(education_points),
-                                   NA,
-                                   education_points),
-         job_points = ifelse(is.infinite(job_points),
-                             NA,
-                             job_points)) %>%
-  mutate(job_points = ifelse(is.na(job_points),
-                             mean(job_points, na.rm = TRUE),
-                             job_points),
-         education_points = ifelse(is.na(education_points),
-                                   mean(education_points, na.rm = TRUE),
-                                   education_points)) %>%
-  rename(ses_occupation_household = job_points,
-         ses_education_household = education_points)
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!is.na(sex))
 
-# Join to census
-census <- left_join(x = census,
-                    y = human_capital,
-                    by = 'agregado')
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           group = sex,
+           color = sex)) +
+  geom_line() +
+  scale_color_manual(name = 'Sex',
+                     values = cols) +
+  theme_cism() +
+  labs(x = 'Year term',
+       y = 'Absetneeism rate',
+       title = 'Absenteeism rate by sex')
 
-# [1] "coverage_material_dictionary.txt"  "education_dictionary.txt"         
-# [3] "floor_material_dictionary.txt"     "fuel_for_cooking_dictionary.txt"  
-# [5] "fuel_for_lighting_dictionary.txt"  "has_kitchen _dictionary.txt"      
-# [7] "is_kitchen_covered_dictionary.txt" "is_kitchen_inside_dictionary.txt" 
-# [9] "job_dictionary.txt"                "latrine_type_dictionary.txt"      
-# [11] "n_constructions_dictionary.txt"    "n_house_divisions_dictionary.txt" 
-# [13] "wall_material_dictionary.txt"      "water_source_dictionary.txt"  
-# Create an education score
 
-#
-# n_bikes=80 
-# n_cars=4000 
-# n_chickens=7 
-# n_cows=80 
-# n_ducks=12
-# has_freezer=150 
-# has_glacier=120 
-# n_goats=30
-# n_moto=400 
-# n_pigs=60
-# has_tractor=2000 
-# has_tv=150
+# Number of siblings and absetneeism rate
+x <- ab %>%
+  filter(!is.na(year_term)) %>%
+  filter(!grepl('NA', year_term)) %>%
+  left_join(census %>%
+              mutate(census_name = name) %>%
+              dplyr::select(census_name, n_children_agregado)) %>%
+  group_by(n_children_agregado) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!is.na(n_children_agregado))
 
-# Join education dictionary to censu
+
+x <- ab %>%
+  group_by(census_name) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  left_join(census %>%
+              mutate(census_name = name) %>%
+              dplyr::select(census_name, n_children_agregado)) %>%
+  mutate(siblings = ifelse(n_children_agregado == 1, '0',
+                           ifelse(n_children_agregado ==2, '1',
+                                  ifelse(n_children_agregado <5, '2-4',
+                                         ifelse(n_children_agregado >=5, '5+', NA))))) %>%
+  filter(!is.na(siblings))
+
+avg <- x %>%
+  group_by(siblings) %>%
+  summarise(absenteeism_rate = mean(absenteeism_rate))
+
+ggplot(data = x,
+       aes(x = siblings,
+           y = absenteeism_rate)) +
+  geom_jitter(alpha = 0.6,
+              color = 'darkgreen') +
+  geom_violin(alpha = 0.3) +
+  geom_point(data = avg,
+           aes(x = siblings, 
+               y = absenteeism_rate),
+           color = 'red',
+           size = 40,
+           pch = '-') +
+  scale_y_log10() +
+  theme_cism() +
+  labs(x = 'Siblings',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by siblings',
+       subtitle = 'No clear relationship')
+
+
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           group = sex,
+           color = sex)) +
+  geom_line() +
+  scale_color_manual(name = 'Sex',
+                     values = cols) +
+  theme_cism() +
+  labs(x = 'Year term',
+       y = 'Absetneeism rate',
+       title = 'Absenteeism rate by sex')
+
+# Plot of age and absenteeism
+x <- ab %>%
+  mutate(grade = substr(turma, 1, 1)) %>%
+  group_by(grade) %>%
+    summarise(absences = length(which(absent)),
+              eligibles = n()) %>%
+    ungroup %>%
+    mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(grade != 'N')
+
+ggplot(data = x,
+       aes(x = grade,
+           y = absenteeism_rate)) +
+  geom_bar(stat = 'identity',
+           fill = 'darkgreen',
+           alpha = 0.6) +
+  theme_cism() +
+  labs(x = 'Grade',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by grade')
+
+
+# Plot of age and absenteeism
+x <- ab %>%
+  mutate(grade = substr(turma, 1, 1)) %>%
+  group_by(census_name, grade) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(grade != 'N') %>%
+  left_join(census %>%
+              mutate(age = as.numeric((as.Date('2016-01-01') - dob)) / 365.25) %>%
+              mutate(age = round(age)) %>%
+              rename(census_name = name) %>%
+              dplyr::select(age, census_name))
+
+ggplot(data = x,
+       aes(x = age,
+           y = absenteeism_rate)) +
+  geom_bar(stat = 'identity',
+           fill = 'darkgreen',
+           alpha = 0.6) +
+  theme_cism() +
+  labs(x = 'Age',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by age and grade') +
+  facet_wrap(~grade)
 
 # Define some colors
 cols <- colorRampPalette(brewer.pal(n = 9,
                                     name = 'BrBG'))(2)
+
+# Explore performance by district over time
+x <- performance %>%
+  mutate(year_trimester = paste0(year, '-', trimester)) %>%
+  group_by(year_trimester, district) %>%
+  summarise(performance = mean(value, na.rm = TRUE))
+
+ggplot(data = x,
+       aes(x = year_trimester,
+           y = performance,
+           group = district,
+           color = district)) +
+  geom_line() +
+  geom_point() +
+  theme_cism() +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  labs(x = 'Year trimester',
+       y = 'Average grade',
+       title = 'School performance',
+       subtitle = 'Over time, by district')
+
+# Explore household conditions
+ggplot(data = census,
+       aes(x = ses_conditions_score,
+           group = district,
+           fill = district)) +
+  geom_density(n = 20,
+               alpha = 0.4) +
+  scale_fill_manual(name = 'District',
+                    values = cols) +
+  theme_cism() +
+  labs(x = 'SES conditions score',
+       y = 'Density',
+       title = 'Household conditions',
+       subtitle = 'Magude vs. Manhiça')
+
+# Visualize assets
+ggplot(data = census,
+       aes(x = ses_asset_score,
+           group = district,
+           fill = district)) +
+  geom_density(n = 40,
+               alpha = 0.4) +
+  scale_fill_manual(name = 'District',
+                    values = cols) +
+  theme_cism() +
+  labs(x = 'SES assets score',
+       y = 'Density',
+       title = 'Household assets',
+       subtitle = 'Magude vs. Manhiça') +
+  scale_x_sqrt() +
+  xlim(0, 15000)
+
+# Explore EDUCATION
+ggplot(data = census,
+       aes(x = ses_education_household,
+           group = district,
+           fill = district)) +
+  geom_density(n = 6,
+               alpha = 0.4) +
+  scale_fill_manual(name = 'District',
+                    values = cols) +
+  theme_cism() +
+  labs(x = 'SES education score',
+       y = 'Density',
+       title = 'Household education (highest in household)',
+       subtitle = 'Magude vs. Manhiça')
+
+ggplot(data = census,
+       aes(x = district,
+           y = ses_education_household,
+           fill = district)) +
+  geom_violin(adjust = 4,
+               alpha = 0.4) +
+  # geom_jitter(aes(color = district),
+  #             alpha = 0.2) +
+  scale_fill_manual(name = 'District',
+                    values = cols) +
+  theme_cism() +
+  labs(x = 'District',
+       y = 'SES education score',
+       title = 'Household education (highest in household)',
+       subtitle = 'Magude vs. Manhiça')
+
+# Occupation
+ggplot(data = census,
+       aes(x = district,
+           y = ses_occupation_household,
+           fill = district)) +
+  geom_violin(adjust = 10,
+              alpha = 0.4) +
+  # geom_jitter(aes(color = district),
+  #             alpha = 0.2) +
+  scale_fill_manual(name = 'District',
+                    values = cols) +
+  theme_cism() +
+  labs(x = 'District',
+       y = 'SES occupation score',
+       title = 'Household occupation (highest in household)',
+       subtitle = 'Magude vs. Manhiça')
+
+# Relationship between ses and absetneeism
+x <- ab %>%
+  group_by(census_name,
+           year_term) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  left_join(census %>%
+              rename(census_name = name) %>%
+              dplyr::select(census_name,
+                            ses_conditions_score)) %>%
+  mutate(ses_conditions_bi = ifelse(ses_conditions_score >
+                                      median(ses_conditions_score, na.rm = TRUE), 'high', 'low')) %>%
+  group_by(ses_conditions_bi, year_term) %>%
+  mutate(absenteeism_rate = sum(absences) / sum(eligibles) * 100) %>% filter(!is.na(ses_conditions_bi),
+                                                                             !grepl('NA', year_term))   %>%
+  ungroup %>%
+  mutate(ses_conditions_bi = factor(ses_conditions_bi,
+                                                                                                                                          levels = c('low', 'high')))
+  
+
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = ses_conditions_bi,
+           group = ses_conditions_bi)) +
+  geom_line(alpha = 0.6, size = 1.5) +
+  scale_color_manual(name = 'SES',
+                     values = cols) +
+  theme_cism() +
+  labs(x = 'Year-term',
+       y = 'Absenteeism rate',
+       title = 'SES (based on assets) and absenteeism',
+       subtitle = 'Manhiça and Magude, all census-identified students')
+
+
 
 # Make a year-trimester variable
 performance$year_trimester <-
