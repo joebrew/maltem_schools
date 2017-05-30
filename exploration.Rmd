@@ -1,0 +1,431 @@
+---
+title: "Untitled"
+author: "Joe Brew"
+date: "May 15, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source('prepare_student_data.R')
+library(RColorBrewer)
+# Define some colors
+cols <- colorRampPalette(brewer.pal(n = 9,
+                                    name = 'BrBG'))(2)
+```
+
+# Sex
+
+```{r}
+# Sex and absenteeism
+x <- ab %>%
+  left_join(census %>%
+              dplyr::select(name, sex) %>%
+              rename(census_name = name)) %>%
+  group_by(sex) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!is.na(sex))
+
+ggplot(data = x,
+       aes(x = sex,
+           y = absenteeism_rate)) +
+  geom_bar(stat = 'identity',
+           fill = 'darkgreen',
+           alpha = 0.6) +
+  theme_cism() +
+  labs(x = 'Sex',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by sex')
+
+# Sex and absetneeism over time
+
+x <- ab %>%
+  left_join(census %>%
+              dplyr::select(name, sex) %>%
+              rename(census_name = name)) %>%
+  mutate(year_month = date_truncate(date, 'month')) %>%
+  group_by(sex, year_month, district) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!is.na(sex))
+
+ggplot(data = x,
+       aes(x = year_month,
+           y = absenteeism_rate,
+           color = district)) +
+  geom_line() + 
+  facet_wrap(~sex, ncol = 1) +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  theme_cism() +
+  labs(x = 'Month',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by sex')
+```
+
+# Distance to school
+
+```{r}
+
+# DISTANCE TO SCHOOL AND ABSENTEEISM
+x <- 
+  ab %>%
+  group_by(census_name) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  left_join(students %>%
+              dplyr::select(census_name,
+                            km_to_health_facility,
+                            km_to_school,
+                            km_to_other_district_student)) %>%
+  filter(!is.na(km_to_school)) %>%
+  mutate(distance_to_school = 
+           ifelse(km_to_school < 5, '0-5', '5+'))
+
+ggplot(data = x,
+       aes(x = km_to_school,
+           y = absenteeism_rate)) +
+  geom_jitter(alpha = 0.2, color = 'darkorange') +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = 'Kilometers to school',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism and distance to school',
+       subtitle = 'Closer = better') +
+  theme_cism() +
+  geom_smooth()
+
+
+
+
+ggplot(data = x,
+       aes(x = km_to_school,
+           y = absenteeism_rate)) +
+  geom_jitter(alpha = 0.2, color = 'darkorange') +
+  # scale_x_log10() +
+  # scale_y_log10() +
+  labs(x = 'Kilometers to school',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism and distance to school',
+       subtitle = 'Closer = better') +
+  theme_cism() +
+  geom_smooth()
+
+
+ggplot(data = x,
+       aes(x = km_to_school,
+           y = absenteeism_rate)) +
+  geom_jitter(alpha = 0.2, color = 'darkorange') +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = 'Kilometers to school',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism and distance to school',
+       subtitle = 'Closer = better') +
+  theme_cism() +
+  geom_smooth() +
+  facet_wrap(~distance_to_school,
+             ncol = 1,
+             scales = 'free_x')
+
+```
+
+# Number of siblings
+
+```{r}
+
+# Number of siblings and absetneeism rate
+
+x <- ab %>%
+  group_by(census_name) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  left_join(census %>%
+              mutate(census_name = name) %>%
+              dplyr::select(census_name, n_children_agregado)) %>%
+  mutate(siblings = ifelse(n_children_agregado == 1, '0',
+                           ifelse(n_children_agregado <=3, '1-2',
+                                  ifelse(n_children_agregado <=6, '3-5',
+                                         ifelse(n_children_agregado >=5, '6+', NA))))) %>%
+  filter(!is.na(siblings)) %>%
+  mutate(n_children = ifelse(siblings <= 2, '1-3',
+                                    '4+'))
+
+avg <- x %>%
+  group_by(siblings) %>%
+  summarise(absenteeism_rate = mean(absenteeism_rate))
+
+ggplot(data = x,
+       aes(x = siblings,
+           y = absenteeism_rate)) +
+  geom_jitter(alpha = 0.6,
+              color = 'darkgreen') +
+  geom_violin(alpha = 0.3) +
+  geom_point(data = avg,
+           aes(x = siblings, 
+               y = absenteeism_rate),
+           color = 'red',
+           size = 40,
+           pch = '-') +
+  scale_y_log10() +
+  theme_cism() +
+  labs(x = 'Siblings',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by siblings',
+       subtitle = 'No clear relationship')
+
+
+
+x <- ab %>%
+  group_by(census_name, year_term, district) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  left_join(census %>%
+              mutate(census_name = name) %>%
+              dplyr::select(census_name, n_children_agregado)) %>%
+  mutate(siblings = ifelse(n_children_agregado == 1, '0',
+                           ifelse(n_children_agregado <=3, '1-2',
+                                  ifelse(n_children_agregado <=6, '3-5',
+                                         ifelse(n_children_agregado >=5, '6+', NA))))) %>%
+  filter(!is.na(siblings)) %>%
+  mutate(n_children = ifelse(siblings <= 2, '1-3',
+                                    '4+')) %>%
+  group_by(district, year_term, n_children) %>%
+  summarise(absenteeism_rate = mean(absenteeism_rate)) %>%
+  filter(!grepl('NA', year_term))
+
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_line() + 
+  facet_wrap(~n_children, ncol = 1) +
+  labs(x = 'Year/term',
+       y = 'Absenteeism rate',
+       title = 'Effect of family size',
+       subtitle = 'Absenteeism rate by number of children in agregado') +
+  theme_cism() +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+# Education
+
+```{r}
+x <- ab %>%
+  left_join(census %>%
+              dplyr::select(name, ses_education_household) %>%
+              rename(census_name = name))  %>%
+  group_by(year_term, census_name, district) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n(),
+            ses_education_household = first(ses_education_household)) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!is.na(ses_education_household)) %>%
+  filter(!grepl('NA', year_term)) %>%
+  mutate(education = ifelse(ses_education_household <2, 
+                            'Low',
+                            ifelse(ses_education_household <4,
+                                   'Medium', 
+                                   ifelse(ses_education_household >= 4, 'High', NA)))) %>%
+  mutate(education = factor(education,
+                            levels = c('Low', 'Medium', 'High')))
+         
+
+ggplot(data = x,
+       aes(x = ses_education_household,
+           y = absenteeism_rate)) +
+  geom_jitter(width = 1,
+              alpha = 0.3,
+              color = 'darkgreen') +
+  geom_smooth() +
+  theme_cism() +
+  labs(x = 'Household education level',
+       y = 'Absenteeism rate',
+       title = 'Education and absenteeism')
+
+ggplot(data = x,
+       aes(x = education,
+           y = absenteeism_rate)) +
+  geom_jitter(#width = 1,
+              alpha = 0.3,
+              color = 'darkgreen') +
+  geom_violin() +
+  theme_cism() +
+  labs(x = 'Household education level',
+       y = 'Absenteeism rate',
+       title = 'Education and absenteeism')
+
+ggplot(data = x,
+       aes(x = absenteeism_rate,
+           group = education,
+           fill = education)) +
+  geom_density(alpha = 0.8, n = 15) +
+  scale_x_log10() +
+  labs(x = 'Absenteeism rate',
+       y = 'Density',
+       title = 'Family education and absenteeism') +
+  scale_fill_manual(name = 'Education',
+                    values = brewer.pal(3, 'Spectral')) +
+  theme_cism()
+
+# Over time
+x <- x %>%
+  group_by(year_term,
+           education, district) %>%
+  summarise(absenteeism_rate = sum(absences) / sum(eligibles) * 100) %>%
+  ungroup
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           group = district,
+           color = district)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~education, ncol = 3) +
+  theme_cism() +
+  labs(x = 'Term',
+       y = 'Absenteeism rate',
+       title = 'Effect of Education level') +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+# Age
+
+# SES Assets
+
+```{r}
+x <- ab %>%
+  left_join(census %>%
+              dplyr::select(name, ses_asset_score,
+                            ses_conditions_score) %>%
+              rename(census_name = name))  %>%
+  group_by(year_term, census_name, district) %>%
+  summarise(absences = length(which(absent)),
+            eligibles = n(),
+            ses_asset_score = first(ses_asset_score),
+            ses_conditions_score = first(ses_conditions_score)) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  # filter(!is.na(ses_education_household)) %>%
+  filter(!grepl('NA', year_term)) %>%
+  mutate(conditions = ifelse(ses_conditions_score <= 10000, 
+                             'Low',
+                             ifelse(ses_conditions_score <= 2000,
+                                    'Medium',
+                                    ifelse(ses_conditions_score > 20000,
+                                           'High', NA)))) %>%
+  mutate(assets = ifelse(ses_asset_score <= 6780, 
+                         'Low',
+                         ifelse(ses_asset_score > 6780,
+                                'High', 
+                                NA))) %>%
+  filter(!is.na(assets),
+         !is.na(conditions))
+
+
+ggplot(data = x,
+       aes(x = assets,
+           y = absenteeism_rate)) +
+  geom_jitter(color = 'darkgreen', alpha = 0.6) +
+  geom_violin(alpha = 0.3) +
+  scale_y_log10() +
+  labs(x = 'Assets',
+       y = 'Absenteeism rate',
+       title = 'Assets and absenteeism',
+       subtitle = 'No finding') +
+  theme_cism()
+
+y <- x %>%
+  group_by(year_term,
+           district,
+           assets) %>%
+  summarise(absenteeism_rate = sum(absences) / sum(eligibles) * 100)
+
+ggplot(data = y,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_line() +
+  facet_wrap(~assets, ncol = 1) +
+  # geom_smooth() +
+  theme_cism() +
+  labs(x = 'Term',
+       y = 'Absenteeism rate',
+       title = 'Assets score and absenteeism') +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  theme(axis.text.x = element_text(angle = 90))
+  
+
+ggplot(data = x,
+       aes(x = conditions,
+           y = absenteeism_rate)) +
+  geom_jitter(color = 'darkgreen', alpha = 0.6) +
+  geom_violin(alpha = 0.3) +
+  scale_y_log10() +
+  labs(x = 'Conditions score',
+       y = 'Absenteeism rate',
+       title = 'Conditions and absenteeism',
+       subtitle = 'No finding') +
+  theme_cism()
+
+
+ggplot(data = x,
+       aes(x = assets,
+           y = absenteeism_rate)) +
+  geom_jitter(color = 'darkgreen', alpha = 0.6) +
+  geom_violin(alpha = 0.3) +
+  scale_y_log10() +
+  labs(x = 'Assets',
+       y = 'Absenteeism rate',
+       title = 'Assets and absenteeism',
+       subtitle = 'No finding') +
+  theme_cism()
+
+y <- x %>%
+  group_by(year_term,
+           district,
+           conditions) %>%
+  summarise(absenteeism_rate = sum(absences) / sum(eligibles) * 100)
+
+ggplot(data = y,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_line() +
+  facet_wrap(~conditions, ncol = 1) +
+  # geom_smooth() +
+  theme_cism() +
+  labs(x = 'Term',
+       y = 'Absenteeism rate',
+       title = 'Conditions score and absenteeism') +
+  scale_color_manual(name = 'District',
+                     values = cols) +
+  theme(axis.text.x = element_text(angle = 90))
+
+
+```
