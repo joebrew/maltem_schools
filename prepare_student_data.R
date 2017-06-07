@@ -481,10 +481,7 @@ if('prepared_data.RData' %in% dir('data')){
   #######
   # PERFORMANCE
   #######
-  # performance <- 
-  # read_csv("data/EXCEL_Pauta_frecuencia_2017-04-13-090813462_modified_by_joe.csv")
-  performance <-
-    read_csv('data/Pautas_2017-05-09.csv')
+  performance <- read_csv('data/EXCEL_Pauta_frecuencia_2017-06-06-214751395_modified_by_joe.csv')
   
   # Clean up
   performance$school <- performance$`Study Subject ID`
@@ -496,15 +493,16 @@ if('prepared_data.RData' %in% dir('data')){
   # Standardize school names
   performance <-
     performance %>%
-    mutate(school = ifelse(grepl('MACHEL|GRACA|GRAÇA|JOSI', school), 'J MACHEL',
-                           ifelse(grepl('FAV|FEV|REIR', school), '3 DE FEV',
-                                  ifelse(grepl('XINA|SIV', school), 'XINAVANE',
-                                         ifelse(grepl('MAGUI', school), 'MAGUIGUANA',
-                                                ifelse(grepl('MARAG', school), 'MARAGRA',
-                                                       ifelse(grepl('SIMB', school), 'SIMBE',
-                                                              ifelse(grepl('MOIN', school), 'MOINE', 
-                                                                     ifelse(grepl('MAGU', school), 'MAGUDE', 
-                                                                            ifelse(grepl('DUCO', school), 'DUCO', NA))))))))))
+    mutate(school = ifelse(grepl('MACHEL|GRACA|GRAÇA', school), 'GRACA MACHEL',
+                           ifelse(grepl('JOSI|ILHA', school), 'ILHA JOSINA',
+                                  ifelse(grepl('FAV|FEV|REIR', school), '3 DE FEV',
+                                         ifelse(grepl('XINA|SIV', school), 'XINAVANE',
+                                                ifelse(grepl('MAGUI|MAGGU', school), 'MAGUIGUANA',
+                                                       ifelse(grepl('MARAG', school), 'MARAGRA',
+                                                              ifelse(grepl('SIMB', school), 'SIMBE',
+                                                                     ifelse(grepl('MOIN', school), 'MOINE', 
+                                                                            ifelse(grepl('MAGU', school), 'MAGUDE', 
+                                                                                   ifelse(grepl('DUCO|DUCA', school), 'DUCO', NA)))))))))))
   
   # Remove those with no school
   performance <- 
@@ -576,7 +574,8 @@ if('prepared_data.RData' %in% dir('data')){
   
   # Get district
   district_dictionary <- data_frame(school = c('3 DE FEV',
-                                               'J MACHEL',
+                                               'GRACA MACHEL',
+                                               'ILHA JOSINA',
                                                'MAGUDE',
                                                'MAGUIGUANA',
                                                'MARAGRA',
@@ -585,6 +584,7 @@ if('prepared_data.RData' %in% dir('data')){
                                                'XINAVANE',
                                                'DUCO'),
                                     district = c('Manhiça',
+                                                 'Manhiça',
                                                  'Manhiça',
                                                  'Magude',
                                                  'Magude',
@@ -695,11 +695,7 @@ if('prepared_data.RData' %in% dir('data')){
   # ABSENTEEISM
   ########
   
-  # ab <- read_tsv('data/TAB_Joe_Brew_all_data_2017-02-23-081532631.tsv',
-  #                skip = 13)
-  # ab <- read_csv('data/EXCEL_Mapa_de_Faltas_2017-04-20-103450493_modified_by_joe.csv',
-  #                skip = 0)
-  ab <- read_csv('data/Mapa_de_Faltas_2017-05-09.csv')
+  ab <- read_csv('data/EXCEL_Mapa_de_Faltas_2017-06-06-214850131_modified_by_joe.csv')
   
   # Remove those with no name
   ab <- ab[,!is.na(names(ab))]
@@ -781,10 +777,6 @@ if('prepared_data.RData' %in% dir('data')){
   ab$year2 <- ifelse(grepl('C2', ab$key), 2016,
                      ifelse(grepl('C1', ab$key), 2015,
                             NA))
-  
-  # What's going on with this?
-  
-  
   
   # Create a date
   ab$date <- as.Date(paste0(ab$year, 
@@ -891,14 +883,8 @@ if('prepared_data.RData' %in% dir('data')){
                          ab$term)
   
   # Get a name
-  ab <- ab %>%
-    mutate(name = ifelse(!is.na(nome_E1_C1), nome_E1_C1,
-                         ifelse(!is.na(nome_E2_C4), nome_E2_C4,
-                                ifelse(!is.na(nome_E1_C2), nome_E1_C2,
-                                       ifelse(!is.na(nome_E1_C3), nome_E1_C3,
-                                              NA)))))
-  
-  
+  ab <- ab %>% mutate(name = nome_E1_C1)
+
   # Cut down to only necessary variables
   ab <- ab %>%
     dplyr::select(name,
@@ -929,8 +915,8 @@ if('prepared_data.RData' %in% dir('data')){
                                              'Xinavane'),
                                   new_school = c('3 DE FEV',
                                                  'DUCO',
-                                                 'J MACHEL',
-                                                 'J MACHEL',
+                                                 'GRACA MACHEL',
+                                                 'ILHA JOSINA',
                                                  'MAGUIGUANA',
                                                  'MARAGRA',
                                                  'MOINE',
@@ -955,14 +941,15 @@ if('prepared_data.RData' %in% dir('data')){
   # Get locations
   geo <-
     data_frame(school = c('3 DE FEV',
-                          'J MACHEL',
+                          'GRACA MACHEL',
                           'MAGUDE',
                           'MAGUIGUANA',
                           'MARAGRA',
                           'MOINE',
                           'SIMBE',
                           'XINAVANE',
-                          'DUCO'),
+                          'DUCO',
+                          'ILHA JOSINA'),
                lng = c(32.796798928,
                        32.9282333538,
                        32.6450501,
@@ -971,7 +958,8 @@ if('prepared_data.RData' %in% dir('data')){
                        32.5305054949,
                        32.5159635997,
                        32.7900299315,
-                       32.5416627188),
+                       32.5416627188,
+                       32.923104),
                lat = c(-25.157889943,
                        -25.0965166999,
                        -25.0259158,
@@ -980,7 +968,8 @@ if('prepared_data.RData' %in% dir('data')){
                        -24.8901998727,
                        -24.8185362371,
                        -25.0441123614,
-                       -24.9252875459))
+                       -24.9252875459,
+                       -25.093706))
   
   ########
   # STANDARDIZING
@@ -1651,9 +1640,7 @@ if('prepared_data.RData' %in% dir('data')){
 }
 
 # Define function for date truncation
-date_truncate <- 
-  function (date_object, level = c("month", "quarter", "year")) 
-  {
+date_truncate <- function(date_object, level = c("month", "quarter", "year")){
     if (is.null(level)) {
       stop("You must provide a level argument of either \"month\", \"quarter\" or \"year\".")
     }
