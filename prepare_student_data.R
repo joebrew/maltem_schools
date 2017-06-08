@@ -568,6 +568,12 @@ if('prepared_data.RData' %in% dir('data')){
            roster_number = get_info(x = `Study Subject ID`,
                                     info = 'number'))
   
+  # Remove those with no letter, etc.
+  performance <- performance %>%
+    filter(!is.na(letter),
+           !is.na(number),
+           !is.na(year))
+  
   # Make long
   performance <- gather(performance, key, value, 
                         portest1_E2_C4:xichamedia_E2_C4)
@@ -678,7 +684,7 @@ if('prepared_data.RData' %in% dir('data')){
   # Remove absurd values
   performance <- 
     performance %>%
-    dplyr::filter(value <= 20)
+    dplyr::filter(value <= 20, value >= 0)
   
   # Remove those with no year
   performance <- 
@@ -689,6 +695,18 @@ if('prepared_data.RData' %in% dir('data')){
   rm(district_dictionary,
      performance_dictionary,
      get_info)
+  
+  # Clean up the oddities
+  performance <-
+    performance %>%
+    mutate(letter = ifelse(letter == 'U', 'UNICA',
+                           ifelse(grepl('B', letter), 'B',
+                                  letter)))
+  performance <- 
+    performance %>%
+    mutate(number = ifelse(number > 5, NA, number)) %>%
+    filter(!is.na(number),
+           !is.na(letter))
   
   
   ########
@@ -932,11 +950,20 @@ if('prepared_data.RData' %in% dir('data')){
   # Remove unecessary objects
   rm(school_dictionary)
   
+  # Clean up oddities
+  ab <-
+    ab %>%
+    mutate(letter = ifelse(letter %in% c('1', '6', '7', '8', '9', 'T'), NA,
+                           ifelse(letter == 'U', 'UNICA',
+                                  letter)))
+  ab <- ab %>%
+    mutate(number = ifelse(number > 5, NA, number)) %>%
+    filter(!is.na(number),
+           !is.na(letter))
   
   #####
   # SCHOOL LOCATIONS
   #####
-  
   
   # Get locations
   geo <-
@@ -1624,6 +1651,12 @@ if('prepared_data.RData' %in% dir('data')){
     students %>%
     filter(!duplicated(name))
   
+  # Create a "turma" variable in performance
+  performance$turma <-
+    paste0(performance$number,
+           '-',
+           performance$letter)
+  
   save(ab,
        census,
        geo,
@@ -1670,3 +1703,4 @@ date_truncate <- function(date_object, level = c("month", "quarter", "year")){
       return(return_object)
     }
   }
+ 
