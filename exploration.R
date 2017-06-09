@@ -12,16 +12,33 @@ library(gganimate)
 #####################################
 # Data quality checks
 
+# Laia: for Ilha Josina and Graça Machel schools, give me, next to the table you sent me before, the first and second name of the students
+x <- ab %>%
+  filter(school %in% c('GRACA MACHEL',
+                       'ILHA JOSINA')) %>% 
+  dplyr::select(name, school) %>%
+  arrange(school, name) %>%
+  filter(!duplicated(paste0(name, school))) %>%
+  mutate(source = 'absenteeism')
+y <- performance %>%
+  filter(school %in% c('GRACA MACHEL',
+                       'ILHA JOSINA')) %>% 
+  dplyr::select(name, school) %>%
+  arrange(school, name) %>%
+  filter(!duplicated(paste0(name, school))) %>%
+  mutate(source = 'performance')
+z <- bind_rows(x, y)
+write_csv(z, '~/Desktop/names_of_ij_and_gm_students.csv')
 # Laia: Report, per each district and school, the name of “turma-class”
 # for which we have info, both for absenteeism and performance (so
 # separately).
 x <- ab %>%
-  group_by(year, district, school, turma) %>% 
+  group_by(year, school, number, letter) %>% 
   summarise(observations_ab = n()) %>%
   ungroup %>%
   full_join(
     performance %>%
-      group_by(year, district, school, turma) %>%
+      group_by(year, school, number, letter) %>%
       summarise(observations_performance = n()) %>%
       ungroup
   )
@@ -926,50 +943,105 @@ ggplot(data = performance %>%
 # 
 # 
 # 
-# # Map of intervention area
-# 
-# moz2_fortified <- moz2_fortified
-# map <- moz2_fortified %>%
-#   filter(id %in% c('Manhiça',
-#                    'Magude'))
-# g <- ggplot() +
-#   geom_polygon(data = map,
-#                aes(x = long,
-#                    y = lat,
-#                    group = id,
-#                    fill = id),
-#                color = 'white',
-#                # color = 'grey',
-#                alpha = 0.8) +
-#   theme_map() +
-#   scale_fill_manual(name = '',
-#                     values = cols) +
-#   geom_point(data = geo,
-#              aes(x = lng,
-#                  y = lat),
-#              color = 'black',
-#              alpha = 0.7,
-#              size = 3) +
-#   # theme_black(base_size = 0) +
-#   theme(axis.line = element_blank(), axis.text = element_blank(), 
-#         axis.ticks = element_blank(), axis.title = element_blank(),
-#         legend.position = 'none') +
-#   theme_cism() %+replace% 
-#   theme(#axis.line = element_blank(), axis.text = element_blank(), 
-#     #axis.ticks = element_blank(), axis.title = element_blank(), 
-#     # panel.background = element_blank(), 
-#     panel.border = element_blank(),
-#     panel.grid = element_blank(), 
-#     panel.spacing = unit(0,
-#                          "lines"), 
-#     legend.justification = c(0, 0), 
-#     legend.position = c(0, 
-#                         0),
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.title.x = element_blank(),
-#     axis.title.y = element_blank())
+# Map of intervention area
+
+moz2_fortified <- moz2_fortified
+map <- moz2_fortified %>%
+  filter(id %in% c('Manhiça',
+                   'Magude'))
+ggplot() +
+  geom_polygon(data = map,
+               aes(x = long,
+                   y = lat,
+                   group = id,
+                   fill = id),
+               color = 'white',
+               # color = 'grey',
+               alpha = 0.8) +
+  theme_map() +
+  scale_fill_manual(name = '',
+                    values = cols) +
+  # geom_point(data = geo,
+  #            aes(x = lng,
+  #                y = lat),
+  #            color = 'black',
+  #            alpha = 0.7,
+  #            size = 3) +
+  # theme_black(base_size = 0) +
+  theme(axis.line = element_blank(), axis.text = element_blank(),
+        axis.ticks = element_blank(), axis.title = element_blank(),
+        legend.position = 'none') +
+  theme_cism() %+replace%
+  theme(#axis.line = element_blank(), axis.text = element_blank(),
+    #axis.ticks = element_blank(), axis.title = element_blank(),
+    # panel.background = element_blank(),
+    panel.border = element_blank(),
+    panel.grid = element_blank(),
+    panel.spacing = unit(0,
+                         "lines"),
+    legend.justification = c(0, 0),
+    legend.position = c(0,
+                        0),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank())
+
+x <- moz1_fortified
+x$color <- x$id %in% c('Maputo', 'Gaza')
+
+cols <- c('black', 'darkred')
+g1 <- ggplot() +
+  geom_polygon(data = x,
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = color),
+               color = 'white',
+               # color = 'grey',
+               alpha = 0.8,
+               size = 0.2) +
+  theme_map() +
+  scale_fill_manual(name = '',
+                    values = cols) +
+  theme(axis.line = element_blank(), axis.text = element_blank(),
+        axis.ticks = element_blank(), axis.title = element_blank(),
+        legend.position = 'none') +
+  coord_map()
+g1
+
+y <- 
+  moz2[moz2@data$NAME_1 %in% c('Maputo', 'Gaza'),]
+y <- broom::tidy(y, region = 'NAME_2')
+a <- moz2@data$NAME_2[moz2@data$NAME_1 %in% c('Maputo', 'Gaza')]
+y <- y %>% filter(id %in% a)
+y$color <- ifelse(y$id == 'Magude', 'darkorange', 'darkred')
+cols <- c('darkorange', 'darkred')
+g2 <- ggplot() +
+  geom_polygon(data = y,
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = color),
+               color = 'white',
+               # color = 'grey',
+               alpha = 0.8,
+               size = 0.2) +
+  theme_map() +
+  scale_fill_manual(name = '',
+                    values = cols) +
+  theme(axis.line = element_blank(), axis.text = element_blank(),
+        axis.ticks = element_blank(), axis.title = element_blank(),
+        legend.position = 'none') +
+  coord_map()
+g2
+Rmisc::multiplot(g1 +
+                   labs(title = 'Mozambique',
+                        subtitle = 'Gaza and Maputo provinces in red'), 
+                 g2 +
+                   labs(title = 'Gaza and Maputo provinces',
+                        subtitle = 'Magude district in orange'), cols = 2)
 # 
 # 
 # # Animated map with schools located, and the dots of each school location that will be blue (if school average absenteeism rate for that month is less than 6%) and red (if more than 6% for that month), to compare, in a map, school by school across time…. (we will see more dots in red in manhiça across time and less in magude…)

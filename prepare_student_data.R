@@ -481,7 +481,7 @@ if('prepared_data.RData' %in% dir('data')){
   #######
   # PERFORMANCE
   #######
-  performance <- read_csv('data/EXCEL_Pauta_frecuencia_2017-06-06-214751395_modified_by_joe.csv')
+  performance <- read_csv('data/performance_7_june_extra_rows_removed.csv')
   
   # Clean up
   performance$school <- performance$`Study Subject ID`
@@ -493,7 +493,7 @@ if('prepared_data.RData' %in% dir('data')){
   # Standardize school names
   performance <-
     performance %>%
-    mutate(school = ifelse(grepl('MACHEL|GRACA|GRAÇA', school), 'GRACA MACHEL',
+    mutate(school = ifelse(grepl('GRACA|GRAÇA', school), 'GRACA MACHEL',
                            ifelse(grepl('JOSI|ILHA', school), 'ILHA JOSINA',
                                   ifelse(grepl('FAV|FEV|REIR', school), '3 DE FEV',
                                          ifelse(grepl('XINA|SIV', school), 'XINAVANE',
@@ -587,7 +587,7 @@ if('prepared_data.RData' %in% dir('data')){
                                                'MARAGRA',
                                                'MOINE',
                                                'SIMBE',
-                                               'XINAVANE',
+                                               'XINAVANE', # ***
                                                'DUCO'),
                                     district = c('Manhiça',
                                                  'Manhiça',
@@ -597,7 +597,7 @@ if('prepared_data.RData' %in% dir('data')){
                                                  'Manhiça',
                                                  'Magude',
                                                  'Magude',
-                                                 'Manhiça',
+                                                 'Manhiça', # ***
                                                  'Magude'))
   
   # Join districts to performance data
@@ -702,6 +702,7 @@ if('prepared_data.RData' %in% dir('data')){
     mutate(letter = ifelse(letter == 'U', 'UNICA',
                            ifelse(grepl('B', letter), 'B',
                                   letter)))
+  
   performance <- 
     performance %>%
     mutate(number = ifelse(number > 5, NA, number)) %>%
@@ -713,7 +714,7 @@ if('prepared_data.RData' %in% dir('data')){
   # ABSENTEEISM
   ########
   
-  ab <- read_csv('data/EXCEL_Mapa_de_Faltas_2017-06-06-214850131_modified_by_joe.csv')
+  ab <- read_csv('data/absenteeism_7_june_extra_rows_removed.csv')
   
   # Remove those with no name
   ab <- ab[,!is.na(names(ab))]
@@ -875,7 +876,7 @@ if('prepared_data.RData' %in% dir('data')){
                                        'Manhiça',
                                        'Magude',
                                        'Magude',
-                                       'Magude',
+                                       'Manhiça',
                                        'Manhiça'))
   ab <- left_join(x = ab,
                   y= geography,
