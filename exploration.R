@@ -34,12 +34,16 @@ write_csv(z, '~/Desktop/names_of_ij_and_gm_students.csv')
 # separately).
 x <- ab %>%
   group_by(year, school, number, letter) %>% 
-  summarise(observations_ab = n()) %>%
+  summarise(observations_ab = n(),
+            name_1_ab = first(name),
+            name_2_ab = last(name)) %>%
   ungroup %>%
   full_join(
     performance %>%
       group_by(year, school, number, letter) %>%
-      summarise(observations_performance = n()) %>%
+      summarise(observations_performance = n(),
+                name_1_performance = first(name),
+                name_2_performance = last(name)) %>%
       ungroup
   )
 write_csv(x, '~/Desktop/laia_info.csv')

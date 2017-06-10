@@ -483,6 +483,13 @@ if('prepared_data.RData' %in% dir('data')){
   #######
   performance <- read_csv('data/performance_7_june_extra_rows_removed.csv')
   
+  # Manual corrections as indicated by Laia
+  performance$`Study Subject ID` <-
+    gsub('3 DE FEVEREIRO_2015_2_E',
+         '3 DE FEVEREIRO_2016_2_E',
+         performance$`Study Subject ID`)
+  
+  
   # Clean up
   performance$school <- performance$`Study Subject ID`
   # unlist(lapply(strsplit(performance$`Study Subject ID`, '_'),
@@ -716,6 +723,12 @@ if('prepared_data.RData' %in% dir('data')){
   
   ab <- read_csv('data/absenteeism_7_june_extra_rows_removed.csv')
   
+  # Manual corrections as indicated by Laia
+  ab$`Study Subject ID` <-
+    gsub('3 DE FEVEREIRO_2015_2_E',
+         '3 DE FEVEREIRO_2016_2_E',
+         ab$`Study Subject ID`)
+  
   # Remove those with no name
   ab <- ab[,!is.na(names(ab))]
   
@@ -807,56 +820,69 @@ if('prepared_data.RData' %in% dir('data')){
   # Get day of week
   ab$dow <- weekdays(ab$date)
   
-  # Standardize school names
-  # # cat(paste0('"', sort(unique(ab$school)), '"', collapse = ',\n'))
-  school_standardizer <-
-    data_frame(school = c("1 E 2 GRAU XINAVANE",
-                          "1E 2 GRAU XINAVANE",
-                          "3 DE FEVEREIRO",
-                          "3 DE FEVEREIRO ",
-                          "3 DE FEVREIRO",
-                          "DUCA",
-                          "DUCO",
-                          "EPC GRACA MACHEL",
-                          "GRACA MACHEL",
-                          "ILHA",
-                          "ILHA JOSINA",
-                          "JOSINA",
-                          "JOSINA MACHEL",
-                          "MAGUIGUANA",
-                          "MARAGRA",
-                          "MOINE",
-                          "SIMBE",
-                          "XINAVANE",
-                          "XINAVENE",
-                          "XIVANANE"),
-               new_school = c('Xinavane', 
-                              'Xinavane',
-                              '3 de Fev',
-                              '3 de Fev',
-                              '3 de Fev',
-                              'Duco',
-                              'Duco',
-                              'Graca Machel',
-                              'Graca Machel',
-                              'Ilha Josina',
-                              'Ilha Josina',
-                              'Ilha Josina',
-                              'Ilha Josina',
-                              'Maguiguana',
-                              'Maragra',
-                              'Moine',
-                              'Simbe',
-                              'Xinavane',
-                              'Xinavane',
-                              'Xinavane'))
-  ab <- left_join(x = ab,
-                  y = school_standardizer,
-                  by = 'school') %>%
-    dplyr::select(-school) %>%
-    rename(school = new_school) %>%
-    filter(!is.na(school))
-  rm(school_standardizer)
+  # # Standardize school names
+  # # # cat(paste0('"', sort(unique(ab$school)), '"', collapse = ',\n'))
+  # school_standardizer <-
+  #   data_frame(school = c("1 E 2 GRAU XINAVANE",
+  #                         "1E 2 GRAU XINAVANE",
+  #                         "3 DE FEVEREIRO",
+  #                         "3 DE FEVEREIRO ",
+  #                         "3 DE FEVREIRO",
+  #                         "DUCA",
+  #                         "DUCO",
+  #                         "EPC GRACA MACHEL",
+  #                         "GRACA MACHEL",
+  #                         "ILHA",
+  #                         "ILHA JOSINA",
+  #                         "JOSINA",
+  #                         "JOSINA MACHEL",
+  #                         "MAGUIGUANA",
+  #                         "MARAGRA",
+  #                         "MOINE",
+  #                         "SIMBE",
+  #                         "XINAVANE",
+  #                         "XINAVENE",
+  #                         "XIVANANE"),
+  #              new_school = c('Xinavane', 
+  #                             'Xinavane',
+  #                             '3 de Fev',
+  #                             '3 de Fev',
+  #                             '3 de Fev',
+  #                             'Duco',
+  #                             'Duco',
+  #                             'Graca Machel',
+  #                             'Graca Machel',
+  #                             'Ilha Josina',
+  #                             'Ilha Josina',
+  #                             'Ilha Josina',
+  #                             'Ilha Josina',
+  #                             'Maguiguana',
+  #                             'Maragra',
+  #                             'Moine',
+  #                             'Simbe',
+  #                             'Xinavane',
+  #                             'Xinavane',
+  #                             'Xinavane'))
+  # ab <- left_join(x = ab,
+  #                 y = school_standardizer,
+  #                 by = 'school') %>%
+  #   dplyr::select(-school) %>%
+  #   rename(school = new_school) %>%
+  #   filter(!is.na(school))
+  # rm(school_standardizer)
+  ab <-
+    ab %>%
+    mutate(school = ifelse(grepl('GRACA|GRAÇA', school), 'GRACA MACHEL',
+                           ifelse(grepl('JOSI|ILHA|J MAC', school), 'ILHA JOSINA',
+                                  ifelse(grepl('FAV|FEV|REIR', school), '3 DE FEV',
+                                         ifelse(grepl('XINA|SIV', school), 'XINAVANE',
+                                                ifelse(grepl('MAGUI|MAGGU', school), 'MAGUIGUANA',
+                                                       ifelse(grepl('MARAG', school), 'MARAGRA',
+                                                              ifelse(grepl('SIMB', school), 'SIMBE',
+                                                                     ifelse(grepl('MOIN', school), 'MOINE', 
+                                                                            ifelse(grepl('MAGU', school), 'GRACA MACHEL', 
+                                                                                   ifelse(grepl('DUCO|DUCA', school), 'DUCO', 
+                                                                                          ifelse(grepl('MAGUDE', school), 'GRACA MACHEL', NA))))))))))))
   
   # Define geography
   # # cat(paste0('"', sort(unique(ab$school)), '"', collapse = ',\n'))
@@ -922,34 +948,34 @@ if('prepared_data.RData' %in% dir('data')){
                   turma,
                   absent)
   
-  # Standardize school names to match those in performance
-  school_dictionary <- data_frame(school = c('3 de Fev',
-                                             'Duco',
-                                             'Graca Machel',
-                                             'Ilha Josina',
-                                             'Maguiguana',
-                                             'Maragra',
-                                             'Moine',
-                                             'Simbe',
-                                             'Xinavane'),
-                                  new_school = c('3 DE FEV',
-                                                 'DUCO',
-                                                 'GRACA MACHEL',
-                                                 'ILHA JOSINA',
-                                                 'MAGUIGUANA',
-                                                 'MARAGRA',
-                                                 'MOINE',
-                                                 'SIMBE',
-                                                 'XINAVANE'))
-  ab <-
-    ab %>%
-    left_join(school_dictionary,
-              by = 'school') %>%
-    mutate(school = new_school) %>%
-    dplyr::select(-new_school)
+  # # Standardize school names to match those in performance
+  # school_dictionary <- data_frame(school = c('3 de Fev',
+  #                                            'Duco',
+  #                                            'Graca Machel',
+  #                                            'Ilha Josina',
+  #                                            'Maguiguana',
+  #                                            'Maragra',
+  #                                            'Moine',
+  #                                            'Simbe',
+  #                                            'Xinavane'),
+  #                                 new_school = c('3 DE FEV',
+  #                                                'DUCO',
+  #                                                'GRACA MACHEL',
+  #                                                'ILHA JOSINA',
+  #                                                'MAGUIGUANA',
+  #                                                'MARAGRA',
+  #                                                'MOINE',
+  #                                                'SIMBE',
+  #                                                'XINAVANE'))
+  # ab <-
+  #   ab %>%
+  #   left_join(school_dictionary,
+  #             by = 'school') %>%
+  #   mutate(school = new_school) %>%
+  #   dplyr::select(-new_school)
   
-  # Remove unecessary objects
-  rm(school_dictionary)
+  # # Remove unecessary objects
+  # rm(school_dictionary)
   
   # Clean up oddities
   ab <-
@@ -1652,11 +1678,52 @@ if('prepared_data.RData' %in% dir('data')){
     students %>%
     filter(!duplicated(name))
   
+  # Apply the manual fixes / corrections emailed by Laia
+  ab <-
+    ab %>%
+    filter(!(school == '3 DE FEV' &
+               number == 3 &
+               letter == 'A' &
+               year == 2016))
+  performance <-
+    performance %>%
+    mutate(letter = ifelse(school == 'DUCO' &
+                    year == 2016 &
+                    letter == 'A',
+                  'UNICA', 
+                  letter))
+  ab <-
+    ab %>%
+    mutate(letter = ifelse(school == 'DUCO' &
+                             year == 2016 &
+                             letter == 'A',
+                           'UNICA', 
+                           letter))
+  ab <-
+    ab %>%
+    mutate(school = ifelse(school == 'MAGUDE',
+                           'GRACA MACHEL',
+                           school))
+  ab <-
+    ab %>%
+    filter(!(school == 'MAGUIGUANA' &
+               number == 1 &
+               letter == 'A' &
+               year == 2016))
+
+  
+  
   # Create a "turma" variable in performance
   performance$turma <-
     paste0(performance$number,
            '-',
            performance$letter)
+  
+  # Create a "turma" variable in absenteeism
+  ab$turma <
+    paste0(ab$number,
+           '-',
+           ab$letter)
   
   save(ab,
        census,
