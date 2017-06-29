@@ -710,7 +710,8 @@ if('prepared_data.RData' %in% dir('data')){
     performance %>%
     mutate(letter = ifelse(letter == 'UNICA', 'U',
                            ifelse(grepl('B', letter), 'B',
-                                  letter)))
+                                  letter))) %>%
+    mutate(letter = ifelse(letter == 'U', 'A', letter))
   
   performance <- 
     performance %>%
@@ -782,8 +783,10 @@ if('prepared_data.RData' %in% dir('data')){
   ab$letter <- toupper(ab$letter)
   ab$letter <- ifelse(ab$letter == 'UNICA', 'U',
                       ifelse(nchar(ab$letter) > 1, NA, 
-                             ab$letter))
-  
+                             ab$letter)) 
+  ab <- ab %>%
+    mutate(letter = ifelse(letter == 'U', 'A', letter))
+
   ab$roster_number <- 
     as.numeric(unlist(lapply(strsplit(ab$`Study Subject ID`, '_'),
                              function(x){
@@ -1029,7 +1032,8 @@ if('prepared_data.RData' %in% dir('data')){
     ab %>%
     mutate(letter = ifelse(letter %in% c('1', '6', '7', '8', '9', 'T'), NA,
                            ifelse(letter == 'UNICA', 'U',
-                                  letter)))
+                                  letter))) %>%
+    mutate(letter = ifelse(letter == 'U', 'A', letter))
   ab <- ab %>%
     mutate(number = ifelse(number > 5, NA, number)) %>%
     filter(!is.na(number),
@@ -1099,7 +1103,12 @@ if('prepared_data.RData' %in% dir('data')){
                            school)) %>%
     dplyr::select(-ab_school)
   
-  df_fuzzy <- cism::fuzzy_match(x = df_names$name)
+  if('fuzzy_names.RData' %in% dir()){
+    load('fuzzy_names.RData')
+  } else {
+    df_fuzzy <- cism::fuzzy_match(x = df_names$name)
+    save(df_fuzzy, file = 'fuzzy_names.RData')
+  }
   
   # Loop through each name, changing it if similar enough to another
   df_names$new_name <- df_names$name
@@ -1148,6 +1157,29 @@ if('prepared_data.RData' %in% dir('data')){
     }
   }
   
+  # Use df_names to create id numbers
+  id_numbers <-
+    df_names %>%
+    group_by(name,
+             new_name,
+             school) %>%
+    tally %>%
+    ungroup %>%
+    dplyr::select(-n) %>%
+    mutate(name_match_type = ifelse(name == new_name, 'perfect',
+                                    'fuzzy')) %>%
+    mutate(perfect_dummy = ifelse(name_match_type == 'perfect', 1, 0),
+           fuzzy_dummy = ifelse(name_match_type == 'fuzzy', 1, 0)) %>%
+    mutate(perfect_dummy = cumsum(perfect_dummy),
+           fuzzy_dummy =cumsum(fuzzy_dummy)) %>%
+    mutate(fuzzy_dummy = fuzzy_dummy + 100000) %>%
+    mutate(id = ifelse(name_match_type == 'perfect', perfect_dummy,
+                       fuzzy_dummy)) %>%
+    rename(original_name = name) %>%
+    dplyr::select(original_name,
+                  school,
+                  id)
+  # 
   # Fix the names in performance and ab to be standardized
   ab <- 
     ab %>%
@@ -1304,23 +1336,23 @@ if('prepared_data.RData' %in% dir('data')){
     rename(school = school.x) %>%
     dplyr::select(-school.y)
   
-  # Remov unecessary objects
-  rm(best_index,
-     best_name,
-     census_names,
-     i,
-     n_names,
-     scores,
-     this_name,
-     this_school,
-     threshold,
-     df_fuzzy,
-     df_names,
-     fuzzy_census,
-     scores_df,
-     j,
-     new_name,
-     this_column)
+  # # Remov unecessary objects
+  # rm(best_index,
+  #    best_name,
+  #    census_names,
+  #    i,
+  #    n_names,
+  #    scores,
+  #    this_name,
+  #    this_school,
+  #    threshold,
+  #    df_fuzzy,
+  #    df_names,
+  #    fuzzy_census,
+  #    scores_df,
+  #    j,
+  #    new_name,
+  #    this_column)
   
   # Rename name in census
   census <-
@@ -1331,12 +1363,12 @@ if('prepared_data.RData' %in% dir('data')){
   students <- 
     data_frame(name = sort(unique(c(performance$name,
                                     ab$name))))
-  
+
   # Create an id number
   
   # No longer using id
   # students$id <- 1:nrow(students)
-  
+
   # Get the name in the census
   students <-
     students %>%
@@ -1807,6 +1839,95 @@ if('prepared_data.RData' %in% dir('data')){
            '-',
            ab$letter)
   
+  # Remove those with no id
+  ab <- ab %>% filter(!is.na(id), !is.na(name))
+  performance <- performance %>% filter(!is.na(id), !is.na(name))
+  students <- students %>% filter(!is.na(id), !is.na(name))
+  
+  save.image('~/Desktop/temp.RData')
+  
+  
+  # Create variable defining the level of matching
+  ab$match_type <-
+    ifelse(paste0(ab$original_name, ab$school) %in% 
+             paste0(performance$original_name,
+                    performance$school),
+           'perfect',
+           ifelse(paste0(ab$name, ab$school) %in%
+                    paste0(performance$name, performance$school),
+                  'fuzzy',
+                  'none'))
+  performance$match_type <-
+    ifelse(paste0(performance$original_name,
+                  performance$school) %in% 
+             paste0(ab$original_name,
+                    ab$school),
+           'perfect',
+           ifelse(paste0(performance$name, performance$school) %in%
+                    paste0(ab$name, ab$school),
+                  'fuzzy',
+                  'none'))
+  
+  # Remove old id from everywhere
+  ab$id <- NULL
+  performance$id <- NULL
+  students$id <- NULL
+
+  # Get match types into students
+  match_types <-
+    ab %>%
+    group_by(name, school, match_type) %>%
+    tally %>%
+    ungroup %>%
+    bind_rows(
+      performance %>%
+        group_by(name, school, match_type) %>%
+        tally %>%
+        ungroup
+    ) %>%
+    group_by(name,
+             school,
+             match_type) %>%
+    tally %>%
+    ungroup %>%
+    dplyr::select(name,
+                  school,
+                  match_type) %>%
+    arrange(name) %>%
+    mutate(dummy = 1) %>%
+    mutate(is_none = match_type == 'none') %>%
+    group_by(is_none) %>%
+    mutate(id = cumsum(dummy)) %>%
+    ungroup %>%
+    dplyr::select(-dummy, -is_none) %>%
+    mutate(id = ifelse(match_type == 'none',
+                       id + 100000,
+                       id))
+  
+  # Bring ids and match types into every where
+  ab <-
+    ab %>%
+    left_join(match_types)
+  performance <-
+    performance %>%
+    left_join(match_types)
+  students <- 
+    students %>%
+    left_join(match_types)
+  
+  # Remove duplicates
+  students <- 
+    students %>%
+    filter(!duplicated(paste0(name, school)))
+  ab <- ab %>%
+    filter(!duplicated(paste0(name, school, date)))
+  performance <-
+    performance %>%
+    filter(!duplicated(paste0(name, school,
+                              year,
+                              trimester,
+                              subject)))
+
   save(ab,
        census,
        geo,
