@@ -25,8 +25,7 @@ cols <- colorRampPalette(brewer.pal(n = 9,
 # Sex and absenteeism
 x <- ab %>%
   left_join(census %>%
-              dplyr::select(name, sex) %>%
-              rename(census_name = name)) %>%
+              dplyr::select(census_name, sex)) %>%
   group_by(sex) %>%
   summarise(absences = length(which(absent)),
             eligibles = n()) %>%
@@ -49,8 +48,7 @@ ggplot(data = x,
 
 x <- ab %>%
   left_join(census %>%
-              dplyr::select(name, sex) %>%
-              rename(census_name = name)) %>%
+              dplyr::select(census_name, sex)) %>%
   mutate(year_month = date_truncate(date, 'month')) %>%
   group_by(sex, year_month, district) %>%
   summarise(absences = length(which(absent)),
@@ -155,7 +153,6 @@ x <- ab %>%
   ungroup %>%
   mutate(absenteeism_rate = absences / eligibles * 100) %>%
   left_join(census %>%
-              mutate(census_name = name) %>%
               dplyr::select(census_name, n_children_agregado)) %>%
   mutate(siblings = ifelse(n_children_agregado == 1, '0',
                            ifelse(n_children_agregado <=3, '1-2',
@@ -197,7 +194,6 @@ x <- ab %>%
   ungroup %>%
   mutate(absenteeism_rate = absences / eligibles * 100) %>%
   left_join(census %>%
-              mutate(census_name = name) %>%
               dplyr::select(census_name, n_children_agregado)) %>%
   mutate(siblings = ifelse(n_children_agregado == 1, '0',
                            ifelse(n_children_agregado <=3, '1-2',
@@ -232,8 +228,7 @@ ggplot(data = x,
 ```{r}
 x <- ab %>%
   left_join(census %>%
-              dplyr::select(name, ses_education_household) %>%
-              rename(census_name = name))  %>%
+              dplyr::select(census_name, ses_education_household))  %>%
   group_by(year_term, census_name, district) %>%
   summarise(absences = length(which(absent)),
             eligibles = n(),
@@ -261,7 +256,8 @@ ggplot(data = x,
   theme_cism() +
   labs(x = 'Household education level',
        y = 'Absenteeism rate',
-       title = 'Education and absenteeism')
+       title = 'Education and absenteeism',
+       subtitle = 'No clear relationship')
 
 ggplot(data = x,
        aes(x = education,
@@ -318,9 +314,8 @@ ggplot(data = x,
 ```{r}
 x <- ab %>%
   left_join(census %>%
-              dplyr::select(name, ses_asset_score,
-                            ses_conditions_score) %>%
-              rename(census_name = name))  %>%
+              dplyr::select(census_name, ses_asset_score,
+                            ses_conditions_score))  %>%
   group_by(year_term, census_name, district) %>%
   summarise(absences = length(which(absent)),
             eligibles = n(),
