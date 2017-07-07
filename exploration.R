@@ -9,6 +9,23 @@ library(RColorBrewer)
 library(waffle)
 library(gganimate)
 
+# Regressions
+#####################################
+
+# Passed trimester exam
+model_data <- performance %>%
+  mutate(value = ifelse(value >= 10, 1, 0),
+         interv = ifelse(district == 'Magude', 'intervention', 'control'),
+         after = ifelse(year >= 2016, 'after', 'before'),
+         interv_after = year >= 2016 & district == 'Magude')
+
+# Regression number 1
+# value intervention after interv_after i.subject_n
+fit <- lm(value ~ after*interv + school, data = model_data)
+summary(fit)
+
+
+
 #####################################
 # Data quality checks
 

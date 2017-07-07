@@ -2254,6 +2254,11 @@ if('prepared_data.RData' %in% dir('data')){
      left_join(ab_dups) %>%
      filter(!flag) %>%
      dplyr::select(-flag)
+   
+   # Remove NA subjects
+   performance <-
+     performance %>%
+     filter(!is.na(subject))
   
   save(ab,
        census,
