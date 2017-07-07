@@ -477,17 +477,60 @@ if('prepared_data.RData' %in% dir('data')){
   } else {
     load('data/census_done.RData')
   }
+  
   #######
   # PERFORMANCE
   #######
   performance <- read_csv('data/performance_7_june_extra_rows_removed.csv')
   
+
   # Manual corrections as indicated by Laia
   performance$`Study Subject ID` <-
     gsub('3 DE FEVEREIRO_2015_2_E',
          '3 DE FEVEREIRO_2016_2_E',
          performance$`Study Subject ID`)
+  performance <-
+    performance %>%
+    filter(`Study Subject ID` != '3 DE FEVEREIRO_2015_4_C_3') %>%
+    mutate(year_E2_C4 = ifelse(`Study Subject ID` %in% c("3 DE FEVEREIRO_2016_1_F_",
+                                                         "3 DE FEVEREIRO_2016_2_D_",
+                                                         "3 DE FEVEREIRO_2016_2_E_",
+                                                         "3 DE FEVEREIRO_2016_3_A_",
+                                                         "EP GRACA MACHEL_2016_5_B_",
+                                                         "EP MARAGRA_2016_1_E_",
+                                                         "GRACA MACHEL_2016_3_C_",
+                                                         "ILHA JOSINA_2016_2_C_",
+                                                         "MAGUIGUANA_2016_1_C_",
+                                                         "MAGUIGUANA_2016_5_C_",
+                                                         "MARAGRA_2016_1_D_"),
+                               2016,
+                               year_E2_C4)) %>% 
+    mutate(year_E2_C4 = ifelse(`Study Subject ID` %in% c("3 DE FEVEREIRO_2015_3_B_",
+                                                         "GRACA  MACHEL_2015_1_A_",
+                                                         "ILHA JOSINA_2015_1_D",
+                                                         "MARAGRA_2015_3_A_",
+                                                         "MARAGRA_2015_5_F_"),
+                               2015,
+                               year_E2_C4))
+
+  # Drop some observations that don't exist
+  performance <-
+    performance %>%
+    filter(!`Study Subject ID` %in% c("3 DE FEVEREIRO_2015_3_B_12", 
+                                     "3 DE FEVEREIRO_2015_4_A_14", 
+                                     "ILHA JOSINA_2015_1_D_", 
+                                     "ILHA JOSINA_2016_1_B_3", 
+                                     "ILHA JOSINA_2016_2_C_3", 
+                                     "ILHA JOSINA_2016_2_C_23", 
+                                     "3 DE FEVEREIRO_2015_3_B_25", 
+                                     "3 DE FEVEREIRO_2015_4_A_33"))
   
+  # For those that have indeed the same name and belong to different turmas, 
+  # we change the name of one of them. we first create a variable"
+  performance$nome_E2_C4[performance$`Study Subject ID` == 'GRACA MACHEL_2015_2_C_1'] <- 'ADERITO S COSSA 2 (duplicate name, but truly different person)' 
+  performance$nome_E2_C4[performance$`Study Subject ID` == 'MAGUIGUANA_2016_3_B_'] <- 'ANTONIO FERNANDO COSSA 2 - sounds the same, but different' 
+  performance$nome_E2_C4[performance$`Study Subject ID` == 'MARAGRA_2015_2_C_11'] <- 'CARLOS ALBERTO MATUSSE (the other one, similar name)' 
+
   
   # Clean up
   performance$school <- performance$school_E2_C4
@@ -563,17 +606,80 @@ if('prepared_data.RData' %in% dir('data')){
     return(out)
   }
   
+  
+  
   # Get year, grade, turma and number
   performance <-
     performance %>%
-    mutate(year = year_E2_C4, #get_info(x = `Study Subject ID`,
-                           # info = 'year'),
-           number = classe_E2_C4, #get_info(x = `Study Subject ID`,
-                             # info = 'grade'),
-           letter = turma_E2_C4)#, #get_info(x = `Study Subject ID`,
-                             # info = 'turma'),
+    mutate(year = year_E2_C4,
+           year_from_id = get_info(x = `Study Subject ID`,
+                           info = 'year'),
+           number = classe_E2_C4, 
+           number_from_id = get_info(x = `Study Subject ID`,
+                             info = 'grade'),
+           letter = turma_E2_C4, 
+           letter_from_id = get_info(x = `Study Subject ID`,
+                             info = 'turma'))#,
            # roster_number = get_info(x = `Study Subject ID`,
            #                          info = 'number'))
+  
+  # More manual cleaning as indicated by Laia
+  performance <- performance %>%
+    mutate(school = ifelse(school == 'MARAGRA' & 
+                             year == 2016 &
+                             number == 1 &
+                             letter == 'B',
+                           '3 DE FEV',
+                           school),
+           letter = ifelse(school == 'DUCO' &
+                             year == 2015 &
+                             number == 2,
+                           'U',
+                           letter),
+           letter = ifelse(school == 'GRACA MACHEL' &
+                             year == 2016 &
+                             number == 5 &
+                             letter == 'D',
+                           'C',
+                           letter),
+           letter = ifelse(school == 'ILHA JOSINA' &
+                             year == 2016 &
+                             number == 5 &
+                             letter == 'D',
+                           'B',
+                           letter),
+           number = ifelse(school == 'MARAGRA' &
+                             year == 2016 &
+                             number == 3 &
+                             letter == 'F',
+                           2,
+                           number),
+           letter = ifelse(school == 'MOINE' &
+                             year == 2016 &
+                             number == 3 &
+                             letter == 'B',
+                           'U',
+                           letter),
+           letter = ifelse(school == 'SIMBE' &
+                             year == 2015 &
+                             number == 5 &
+                             letter == 'A',
+                           'U',
+                           letter),
+           letter = ifelse(school == 'MOINE' &
+                             year == 2015 &
+                             number == 5 &
+                             letter == 'A',
+                           'U',
+                           letter))
+
+  performance <-
+    performance %>%
+    mutate(flag_year = year != year_from_id,
+           flag_number = number != number_from_id,
+           flag_letter = letter != letter_from_id) %>%
+    mutate(flag = flag_year | flag_number | flag_letter) %>%
+    filter(!flag)
   
   # Remove those with no letter, etc.
   performance <- performance %>%
@@ -597,7 +703,7 @@ if('prepared_data.RData' %in% dir('data')){
                                                'XINAVANE', # ***
                                                'DUCO'),
                                     district = c('Manhiça',
-                                                 'Manhiça',
+                                                 'Magude',
                                                  'Manhiça',
                                                  'Magude',
                                                  'Magude',
@@ -941,7 +1047,7 @@ if('prepared_data.RData' %in% dir('data')){
                                      "Ilha Josina")),
                           district = c('Manhiça',
                                        'Magude',
-                                       'Manhiça',
+                                       'Magude',
                                        'Magude',
                                        'Manhiça',
                                        'Magude',
@@ -1826,6 +1932,11 @@ if('prepared_data.RData' %in% dir('data')){
                            'GRACA MACHEL',
                            school))
   
+  # Still need to run ------------------------
+  performance$letter <- ifelse(performance$letter == 'U', 'A',
+                               performance$letter)
+  ab$letter <- ifelse(ab$letter == 'U', 'A',
+                               ab$letter)
   
   # Create a "turma" variable in performance
   performance$turma <-
@@ -1844,8 +1955,31 @@ if('prepared_data.RData' %in% dir('data')){
   performance <- performance %>% filter(!is.na(id), !is.na(name))
   students <- students %>% filter(!is.na(id), !is.na(name))
   
-  save.image('~/Desktop/temp.RData')
-  
+  # Remove all duplicates
+  ab_dups <-
+    ab %>%
+    group_by(name, district, year, term, date,
+             number, letter, turma) %>%
+    tally %>%
+    ungroup %>%
+    mutate(flag = n > 1) 
+  ab <- ab %>%
+    left_join(ab_dups) %>%
+    filter(!flag) %>%
+    dplyr::select(-flag)
+  performance_dups <- 
+    performance %>%
+    group_by(name, district, school, year, trimester, number,
+             letter, subject) %>%
+    tally %>%
+    ungroup %>%
+    mutate(flag = n > 1) 
+  performance <-
+    performance %>%
+    left_join(performance_dups) %>%
+    filter(!flag) %>%
+    dplyr::select(-flag)
+
   
   # Create variable defining the level of matching
   ab$match_type <-
