@@ -13,6 +13,52 @@ library(sp)
 # pass: normal
 
 
+# Define function for date truncation
+date_truncate <- function(date_object, level = c("month", "quarter", "year")){
+  if (is.null(level)) {
+    stop("You must provide a level argument of either \"month\", \"quarter\" or \"year\".")
+  }
+  date_object <- as.Date(date_object)
+  if (sum(!is.na(date_object)) == 0) {
+    return(date_object)
+  }
+  if (level == "month") {
+    return_object <- date_object
+    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                  "%Y-%m"), "-01"))
+    return(return_object)
+  }
+  if (level == "quarter") {
+    q_month <- (((((as.numeric(format(date_object, "%m"))) - 
+                     1)%/%3) + 1) * 3) - 2
+    return_object <- date_object
+    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                  "%Y"), ifelse(nchar(q_month[!is.na(return_object)]) == 
+                                                                                  2, "-", "-0"), q_month, "-01"))
+    return(return_object)
+  }
+  if (level == "year") {
+    return_object <- date_object
+    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
+                                                                  "%Y"), "-01-01"))
+    return(return_object)
+  }
+}
+
+month_matcher <- data_frame(month_number = c(1:12),
+                            month_name = c('jan',
+                                           'fev',
+                                           'mar',
+                                           'abr',
+                                           'mai',
+                                           'jun',
+                                           'jul',
+                                           'ago',
+                                           'set',
+                                           'out',
+                                           'nov',
+                                           'dec'))
+
 if('prepared_data.RData' %in% dir('data')){
   load('data/prepared_data.RData')
 } else {
@@ -2062,6 +2108,153 @@ if('prepared_data.RData' %in% dir('data')){
                               trimester,
                               subject)))
 
+  # Final cleaning to absenteeism -----------------------------
+  ab$day <- as.numeric(format(ab$date, '%d'))
+  # NOT IMPLEMENTING THE BELOW YET, SINCE IT CREATES LOTS OF WEEKENDS! (Laia needs to review manually)
+  # ab <- ab %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="abr"&turma=="2-A",
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="jun"&turma=="3-A"&day>26,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day==5|day==6,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="2-A"&day==27,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day==8|day==9|day==10|day==11,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="abr"&turma=="5-B"&day==19|day==20,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16|day==1,
+  #                        date +2, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day==16|day==17|day==18|day==19|day==20,
+  #                        date - 2, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day==26|day==27, 
+  #                        date +2, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-A"&day==27,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-A"&day==4|day==11|day==18,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>7&day<27,
+  #                        date - 3, date)) %>%
+  #   mutate(date = ifelse(school=="MOINE"&year==2015&month_name=="jun"&turma=="5-A"&day==21|day==22,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="4-B",
+  #                        date -3, date)) %>%
+  #   mutate(date = ifelse(school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="3-A",
+  #                        date - 3, date)) %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="abr"&turma=="2-A",
+  #                        date + 1, date)) %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="abr"&turma=="4-A",
+  #                        date - 2, date)) %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="out"&turma=="4-A"&day==23|day==24, 
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="abr"&turma=="5-A"&day==3|day==4,
+  #                        date + 1, date)) %>%
+  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="1-A"&day>23&day<29,
+  #                        date +1, date)) %>%
+  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="jun"&turma=="1-B"&day>17&day<22,
+  #                        date +2, date)) %>%
+  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day==5|day==6,
+  #                        date +1, date))
+  # THE FOLLOWING WAS ALSO CARRIED OUT IN STATA, BUT IGNORING FOR NOW SINCE IT GENERATES WEEKENDS
+  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>7&day<12
+  # replace day=day-3 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>14&day<31
+  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16
+  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="abr"&turma=="5-B"&day==19|day==20
+  # replace day=day-1 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day==18
+  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="mar"&turma=="2-UNICA"&day>5&day<12
+  # replace day=day+1 if school=="3 DE FEV"&year==2016&month_name=="out"&turma=="1-A"&day==16
+  # replace day=day+1 if school=="3 DE FEV"&year==2016&month_name=="out"&turma=="1-A"&day==16
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="4-B"&day>7&day<32
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-B"&day>5&day<32
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="may"&turma=="4-B"&day>6&day<32
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="jul"&turma=="4-B"&day>3&day<32
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="jun"&turma=="4-B"&day>3&day<30
+  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="4-B"&day>4&day<31
+  # replace day=day+2 if school=="3 DE FEV"&year==2016&month_name=="set"&turma=="4-E"&day>0&day<4
+  # replace day=day-2 if school=="3 DE FEV"&year==2016&month_name=="mar"&turma=="5-B"&day>15&day<21
+  # replace day=day-3 if school=="ILHA JOSINA"&year==2015&month_name=="jul"&turma=="1-A"&day>3&day<32
+  # replace day=day+2 if school=="ILHA JOSINA"&year==2015&month_name=="jun"&turma=="4-C"&day>0&day<30
+  # replace day=day+1 if school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="5-A"&day>12&day<31
+  # replace day=day+1 if school=="ILHA JOSINA"&year==2016&month_name=="jul"&turma=="5-C"&day>23&day<29
+  # replace day=day+1 if school=="MARAGRA"&year==2015&month_name=="mar"&turma=="2-B"&day==1
+  # replace day=day+2 if school=="MARAGRA"&year==2015&month_name=="ago"&turma=="2-C"&day==1|day==2
+  # replace day=day+1 if school=="MARAGRA"&year==2016&month_name=="abr"&turma=="5-F"&day==24
+  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="jun"&turma=="1-A"&day>4&day<10
+  # replace day=day-2 if school=="XINAVANE"&year==2015&month_name=="jul"&turma=="3-A"&day>7&day<20
+  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="jun"&turma=="3-A"&day>25&day<31
+  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="oct"&turma=="4-C"&day>1&day<14
+  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="oct"&turma=="4-C"&day>8&day<12
+  # replace day=day+1 if school=="DUCO"&year==2015&month_name=="abr"&turma=="2-UNICA"&day>11&day<16
+  # replace day=day-1 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>13&day<16
+  # replace day=day-3 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day==18
+  # replace day=day-2 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>19&day<25
+  # replace day=day-2 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>26&day<32
+  # replace day=day+1 if school=="DUCO"&year==2016&month_name=="oct"&turma=="4-UNICA"&day>22&day<25
+  # replace day=day+1 if school=="DUCO"&year==2016&month_name=="abr"&turma=="5-UNICA"&day>2&day<5
+  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>1&day<6
+  # replace day=day-2 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>8&day<12
+  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>15&day<18
+  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>22&day<25
+  # replace day=day+1 if school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day>4&day<7
+  # replace day=day+1 if school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="1-A"&day>23&day<29
+  # replace day=day+2 if school=="GRACA MACHEL"&year==2016&month_name=="jun"&turma=="1-B"&day>17&day<22
+  # replace day=day-2 if school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="2-C"&day==24
+  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day>7&day<12
+  # replace day=day+3 if school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day>12&day<18
+  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>15&day<21
+  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>22&day<28
+  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>7&day<12
+  # replace day=day-3 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>14&day<27
+  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16
+  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day>17&day<23
+  # replace day=day+3 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day==3
+  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="mar"&turma=="2-UNICA"&day>5&day<11
+  # replace day=day-2 if school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="2-UNICA"&day>5&day<11
+  # 
+  # ab$date <- as.Date(ab$date, origin = '1970-01-01')
+  # ab <- ab %>%
+  #   # Regenerate all the date-related variables
+  #   mutate(year = as.numeric(format(date, '%Y'))) %>%
+  #   mutate(year_term = paste0(year, '-', term)) %>%
+  #   mutate(month = date_truncate(date, 'month')) %>%
+  #   dplyr::select(-month_number) %>%
+  #   mutate(month_number = as.numeric(format(date, '%m'))) %>%
+  #   left_join(month_matcher) %>%
+  #   mutate(dow = weekdays(date)) %>%
+  #   mutate(day = as.numeric(format(date, '%d')))
+  # If we re-introduce the date shifts from about 15 lines up, then we'll
+   # also need to remove weekends here !!!!!!!!!!!!!!!!!!
+  
+  # *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis
+  # Laia will look at this to see if we can potentially salvage some
+  ab <- ab %>%
+    mutate(flag = 
+             ifelse(school=="GRACA MACHEL"&year==2015&turma=="1-C" |
+                      school=="GRACA MACHEL"&year==2015&turma=="2-A" |
+                      school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="aug" |
+                      school=="3 DE FEV"&year==2016&turma=="1-A"&month_name=="set"|month_name=="out"|
+                      school=="3 DE FEV"&year==2015&turma=="3-A"|
+                      school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="aug"|
+                      school=="MARAGRA"&year==2015&turma=="1-D",
+                    TRUE, FALSE)) %>%
+    filter(!flag) %>%
+    dplyr::select(-flag)
+  
+  ab$n <- NULL
+  # Re-check for duplicates
+   ab_dups <-
+     ab %>%
+     group_by(name, district, year, term, date,
+              number, letter, turma) %>%
+     tally %>%
+     ungroup %>%
+     mutate(flag = n > 1) 
+   ab <- ab %>%
+     left_join(ab_dups) %>%
+     filter(!flag) %>%
+     dplyr::select(-flag)
+  
   save(ab,
        census,
        geo,
@@ -2077,34 +2270,3 @@ if('prepared_data.RData' %in% dir('data')){
   write_csv(students, 'outputs/students.csv')
 }
 
-# Define function for date truncation
-date_truncate <- function(date_object, level = c("month", "quarter", "year")){
-  if (is.null(level)) {
-    stop("You must provide a level argument of either \"month\", \"quarter\" or \"year\".")
-  }
-  date_object <- as.Date(date_object)
-  if (sum(!is.na(date_object)) == 0) {
-    return(date_object)
-  }
-  if (level == "month") {
-    return_object <- date_object
-    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
-                                                                  "%Y-%m"), "-01"))
-    return(return_object)
-  }
-  if (level == "quarter") {
-    q_month <- (((((as.numeric(format(date_object, "%m"))) - 
-                     1)%/%3) + 1) * 3) - 2
-    return_object <- date_object
-    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
-                                                                  "%Y"), ifelse(nchar(q_month[!is.na(return_object)]) == 
-                                                                                  2, "-", "-0"), q_month, "-01"))
-    return(return_object)
-  }
-  if (level == "year") {
-    return_object <- date_object
-    return_object[!is.na(return_object)] <- as.Date(paste0(format(return_object[!is.na(return_object)], 
-                                                                  "%Y"), "-01-01"))
-    return(return_object)
-  }
-}
