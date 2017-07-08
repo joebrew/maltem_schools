@@ -30,6 +30,7 @@ y = old %>%
 #   arrange(desc(n))
 y <- y %>% filter(n > 1)
 View(y)
+write_csv(y, '~/Desktop/table_with_duplicates_clarification.csv')
 
 # Regressions
 #####################################
@@ -101,7 +102,10 @@ model_data <-
   mutate(timeinterv = time * intervention) %>%
   mutate(timetreat = factor(timeinterv)) %>%
   mutate(period = factor(time))
-fit <- lm(pass ~ intervention + period  + timetreat + school + subject + factor(trimester), data = model_data)
+fit <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
+summary(fit)
+
+fit <- lm(pass ~ intervention + period  + timetreat + school , data = model_data %>% filter(subject == 'Math'))
 summary(fit)
 
 #####################################
