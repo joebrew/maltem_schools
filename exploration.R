@@ -14,17 +14,49 @@ library(gganimate)
 
 # Passed trimester exam
 model_data <- performance %>%
-  mutate(value = ifelse(value >= 10, 1, 0),
+  mutate(pass = ifelse(value >= 10, 1, 0),
          interv = ifelse(district == 'Magude', 'intervention', 'control'),
-         after = ifelse(year >= 2016, 'after', 'before'),
-         interv_after = year >= 2016 & district == 'Magude')
+         after = ifelse(year == 2016, 'after', 'before'),
+         interv_after = year == 2016 & district == 'Magude')
 
+#### BINOMIAL ANALYSIS -------------------------------------
+
+performance <- read_csv('~/Desktop/performance_elisa.csv')
+model_data <- performance
 # Regression number 1
-# value intervention after interv_after i.subject_n
-fit <- lm(value ~ after*interv + school, data = model_data)
+# reg pass intervention after interv_after i.school_n, cluster(intervention)
+fit <- lm(pass ~ after + intervention + interv_after + school, data = model_data) # missing the cluster intervention stuff
 summary(fit)
 
+# Regression number 2
+# reg pass intervention after interv_after i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit <- lm(pass ~ after + intervention + interv_after + factor(school_n) + subject_n, data = model_data %>% filter(!is.na(subject)))
+summary(fit)
 
+# Regression number 3
+# reg pass intervention after interv_after i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit <- lm(pass ~ after + interv + interv_after + school + subject + trimester, data = model_data)
+summary(fit)
+
+# Regression number 4
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit <- lm(pass ~ after + intervention + interv_after + school + subject + trimester, data = x)
+summary(fit)
+
+### CONTINUOUS VARIABLE ANALYSIS --------------------
+
+# Regression number 1
+# reg value intervention after interv_after i.school_n, cluster(intervention)
+
+# Regression number 2
+# reg value intervention after interv_after i.school_n i.subject_n, cluster(intervention)
+
+# Regression number 3
+# reg value intervention after interv_after i.school_n i.subject_n i.trimester, cluster(intervention)
+
+# Regression number 4
+# reg value intervention after interv_after i.school_n i.trimester if subject_n==2, cluster(intervention)
 
 #####################################
 # Data quality checks
