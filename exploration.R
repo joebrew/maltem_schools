@@ -9,6 +9,10 @@ library(RColorBrewer)
 library(waffle)
 library(gganimate)
 
+# To do for boston presentation
+
+# coefficient chart for final regression
+
 # Compare old and new datasets
 old <- read_csv('~/Desktop/performance_elisa.csv')
 old <- old[,names(old) %in% names(performance)]
@@ -46,7 +50,6 @@ model_data <- performance %>%
 #### BINOMIAL ANALYSIS -------------------------------------
 
 # performance <- read_csv('~/Desktop/performance_elisa.csv')
-model_data <- performance
 # Regression number 1
 # reg pass intervention after interv_after i.school_n, cluster(intervention)
 fit <- lm(pass ~ after + intervention + interv_after + school, data = model_data) # missing the cluster intervention stuff
@@ -93,7 +96,7 @@ summary(fit)
 
 # Final piece = pass examination
 time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
-                      trimester = rep(1:3, 2),
+                      trimester = as.character(rep(1:3, 2)),
                       time = -3:2)
 model_data <- 
   model_data %>%
@@ -105,6 +108,7 @@ model_data <-
 fit <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
 summary(fit)
 
+# Just math
 fit <- lm(pass ~ intervention + period  + timetreat + school , data = model_data %>% filter(subject == 'Math'))
 summary(fit)
 
