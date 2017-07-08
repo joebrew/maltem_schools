@@ -9,6 +9,28 @@ library(RColorBrewer)
 library(waffle)
 library(gganimate)
 
+# Compare old and new datasets
+old <- read_csv('~/Desktop/performance_elisa.csv')
+old <- old[,names(old) %in% names(performance)]
+performance <- performance[,names(performance) %in% names(old)]
+performance$trimester <- as.numeric(as.character(performance$trimester))
+x = dplyr::setdiff(performance, old)
+y = old %>% 
+  group_by(name, school, year, trimester, turma, subject) %>%
+  summarise(n = length(unique(original_name)),
+            original_names = paste0(sort(unique(original_name)), collapse = ', '),
+            district = first(district)) %>%
+  ungroup %>%
+  arrange(desc(n))
+# z = performance %>% 
+#   group_by(name, school, year, trimester, turma, subject) %>%
+#   summarise(n = n(), #length(unique(original_name)),
+#             original_names = paste0(sort(unique(original_name)), collapse = ', ')) %>%
+#   ungroup %>%
+#   arrange(desc(n))
+y <- y %>% filter(n > 1)
+View(y)
+
 # Regressions
 #####################################
 
@@ -17,11 +39,12 @@ model_data <- performance %>%
   mutate(pass = ifelse(value >= 10, 1, 0),
          interv = ifelse(district == 'Magude', 'intervention', 'control'),
          after = ifelse(year == 2016, 'after', 'before'),
-         interv_after = year == 2016 & district == 'Magude')
+         interv_after = year == 2016 & district == 'Magude') %>%
+  mutate(intervention = interv)
 
 #### BINOMIAL ANALYSIS -------------------------------------
 
-performance <- read_csv('~/Desktop/performance_elisa.csv')
+# performance <- read_csv('~/Desktop/performance_elisa.csv')
 model_data <- performance
 # Regression number 1
 # reg pass intervention after interv_after i.school_n, cluster(intervention)
@@ -30,33 +53,56 @@ summary(fit)
 
 # Regression number 2
 # reg pass intervention after interv_after i.school_n i.subject_n if subject_n!=., cluster(intervention)
-fit <- lm(pass ~ after + intervention + interv_after + factor(school_n) + subject_n, data = model_data %>% filter(!is.na(subject)))
+fit <- lm(pass ~ after + intervention + interv_after + school + subject, data = model_data %>% filter(!is.na(subject)))
 summary(fit)
 
 # Regression number 3
 # reg pass intervention after interv_after i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
-fit <- lm(pass ~ after + interv + interv_after + school + subject + trimester, data = model_data)
+fit <- lm(pass ~ after + interv + interv_after + school + subject + factor(trimester), data = model_data)
 summary(fit)
 
 # Regression number 4
 # identical to regression number 3 but only for math
 x <- model_data %>% filter(subject == 'Math')
-fit <- lm(pass ~ after + intervention + interv_after + school + subject + trimester, data = x)
+fit <- lm(pass ~ after + intervention + interv_after + school + factor(trimester), data = x)
 summary(fit)
 
 ### CONTINUOUS VARIABLE ANALYSIS --------------------
 
 # Regression number 1
 # reg value intervention after interv_after i.school_n, cluster(intervention)
+fit <- lm(value ~ after + intervention + interv_after + school, data = model_data) # missing the cluster intervention stuff
+summary(fit)
 
 # Regression number 2
-# reg value intervention after interv_after i.school_n i.subject_n, cluster(intervention)
+# reg value intervention after interv_after i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit <- lm(value ~ after + intervention + interv_after + school + subject, data = model_data %>% filter(!is.na(subject)))
+summary(fit)
 
 # Regression number 3
-# reg value intervention after interv_after i.school_n i.subject_n i.trimester, cluster(intervention)
+# reg value intervention after interv_after i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit <- lm(value ~ after + interv + interv_after + school + subject + factor(trimester), data = model_data)
+summary(fit)
 
 # Regression number 4
-# reg value intervention after interv_after i.school_n i.trimester if subject_n==2, cluster(intervention)
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit <- lm(value ~ after + intervention + interv_after + school + factor(trimester), data = x)
+summary(fit)
+
+# Final piece = pass examination
+time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
+                      trimester = rep(1:3, 2),
+                      time = -3:2)
+model_data <- 
+  model_data %>%
+  left_join(time_df) %>%
+  mutate(intervention = ifelse(intervention == 'intervention', 1, 0)) %>%
+  mutate(timeinterv = time * intervention) %>%
+  mutate(timetreat = factor(timeinterv)) %>%
+  mutate(period = factor(time))
+fit <- lm(pass ~ intervention + period  + timetreat + school + subject + factor(trimester), data = model_data)
+summary(fit)
 
 #####################################
 # Data quality checks
