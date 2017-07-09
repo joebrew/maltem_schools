@@ -1,0 +1,230 @@
+---
+title: "The short-term impact of a malaria elimination campaign on school performance: preliminary evidence from Southern Mozambique"
+subtitle: "iHEA, Boston, 2017"
+author: "Laia Cirera, Joe Brew, Judit Valls, Elisa Sicuri"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+fig_height: 5
+fig_width: 7
+output: ioslides_presentation
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment = NA, 
+               echo = FALSE, 
+               warning = FALSE, 
+               message = FALSE, 
+               error = TRUE, 
+               cache = FALSE)
+```
+
+```{r, results = 'hide'}
+# Packages
+library(ggplot2)
+library(cism)
+library(rgeos)
+library(maptools)
+library(rgdal)
+library(tidyr)
+library(RColorBrewer)
+library(dplyr)
+library(leaflet)
+library(readr)
+library(ggthemes)
+library(ggrepel)
+library(knitr)
+library(kableExtra)
+options(knitr.table.format = "html") 
+
+```
+
+
+```{r}
+source('../prepare_student_data.R', chdir = TRUE)
+ab <- ab %>% filter(!grepl('NA', year_term))
+performance <- performance %>% filter(!grepl('NA', trimester))
+performance$n <- NULL
+performance$subject[performance$subject %in% c('English', 'Portuguese')] <- 'Language'
+
+library(RColorBrewer)
+# Define some colors
+cols <- colorRampPalette(brewer.pal(n = 9,
+                                    name = 'BrBG'))(2)
+tablify <- function(x, n = 5){
+  DT::datatable(x,
+                selection = 'none',
+                escape = FALSE,
+                options = list(#sDom  = '<"top">lrt<"bottom">ip',
+                               pageLength = n, 
+                               dom = 'tip'))
+}
+```
+
+## 
+
+<img src="img/tree.png" alt="img/tree.jpg" style="width: 600px; align="center"/>
+
+
+## 
+
+<img src="img/title.png" alt="img/title.png" style="width: 800px;" align="center"/>
+
+
+# Regressions
+
+## Passed trimester exam (all subjects)
+
+
+```{r}
+
+# Passed trimester exam
+model_data <- performance %>%
+  mutate(pass = ifelse(value >= 10, 1, 0),
+         interv = ifelse(district == 'Magude', 'Intervention', 'Control'),
+         after = ifelse(year == 2016, 'After', 'Before'),
+         interaction = ifelse(year == 2016 & district == 'Magude', 'After:Intervention', '!After:Intervention')) %>%
+  mutate(intervention = interv) %>%
+  mutate(after = factor(after, levels = c('Before', 'After')))
+
+#### BINOMIAL ANALYSIS -------------------------------------
+
+# Regression number 1
+# reg pass intervention after interaction i.school_n, cluster(intervention)
+fit1 <- lm(pass ~ after + intervention + interaction + school, data = model_data) # missing the cluster intervention stuff
+# summary(fit1)
+
+# Regression number 2
+# reg pass intervention after interaction i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit2 <- lm(pass ~ after + intervention + interaction + school + subject, data = model_data %>% filter(!is.na(subject)))
+# summary(fit2)
+
+# Regression number 3
+# reg pass intervention after interaction i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit3 <- lm(pass ~ after + intervention + interaction + school + subject + factor(trimester), data = model_data)
+# summary(fit3)
+
+# Regression number 4
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit4 <- lm(pass ~ after + intervention + interaction + school + factor(trimester), data = x)
+# summary(fit4)
+
+### CONTINUOUS VARIABLE ANALYSIS --------------------
+
+# Regression number 1
+# reg value intervention after interaction i.school_n, cluster(intervention)
+fit1b <- lm(value ~ after + intervention + interaction + school, data = model_data) # missing the cluster intervention stuff
+# summary(fit1b)
+
+# Regression number 2
+# reg value intervention after interaction i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit2b <- lm(value ~ after + intervention + interaction + school + subject, data = model_data %>% filter(!is.na(subject)))
+# summary(fit2b)
+
+# Regression number 3
+# reg value intervention after interaction i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit3b <- lm(value ~ after + intervention + interaction + school + subject + factor(trimester), data = model_data)
+# summary(fit3b)
+
+# Regression number 4
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit4b <- lm(value ~ after + intervention + interaction + school + factor(trimester), data = x)
+# summary(fit4b)
+
+# Final piece = pass examination
+time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
+                      trimester = as.character(rep(1:3, 2)),
+                      time = -3:2)
+model_data <- 
+  model_data %>%
+  left_join(time_df) %>%
+  mutate(intervention = ifelse(intervention == 'Intervention', 1, 0)) %>%
+  mutate(timeinterv = time * intervention) %>%
+  mutate(timetreat = factor(timeinterv)) %>%
+  mutate(period = factor(time)) %>%
+  mutate(timetreat = paste0(timetreat, ' Time::Intervention')) %>%
+  mutate(period = paste0(period, ' Period'))
+fit5b <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
+# summary(fit5b)
+
+# Just math
+fit6b <- lm(pass ~ intervention + period  + timetreat + school , data = model_data %>% filter(subject == 'Math'))
+# summary(fit6b)
+
+# Define function for printing table
+pretty_regression <- function(fit = fit1,
+                              remove = '!grepl("school", Term) & !grepl("subject", Term) & !grepl("trimester", Term)',
+                              label = NULL){
+  # Make tidy
+  fit_tidy <- broom::tidy(fit)
+  # rename some columns
+  names(fit_tidy) <- c('Term', 'Estimate', 'S.E.', 'Statistic', 'P')
+  fit_tidy$Statistic <- NULL
+  # Make long
+  fit_tidy <- fit_tidy %>%
+    gather(key, value, Estimate:P) %>%
+    # mutate(Term = ifelse(Term == '(Intercept)', ' Intercept', Term)) %>%
+    arrange(Term)
+  # remove stuff
+  if(!is.null(remove)){
+    fit_tidy <- fit_tidy %>%
+      filter_(remove)
+  }
+  # Recode small vals
+  fit_tidy <- 
+    fit_tidy %>%
+    mutate(value = ifelse(value < 0.001,
+                          '< 0.001',
+                          as.character(round(value, digits = 3))))
+  if(!is.null(label)){
+    names(fit_tidy)[3] <- label
+  }
+
+  # Remove the variable names
+  var_names <- gsub('+', ' ', paste0(as.character(fit$terms[[3]]), collapse = ' + '), fixed = TRUE)
+  var_names <- unlist(strsplit(var_names, ' '))
+  var_names <- var_names[nchar(var_names) > 0]
+  for (i in 1:length(var_names)){
+    fit_tidy$Term <- gsub(var_names[i], '', fit_tidy$Term)
+  }
+  return(fit_tidy)
+}
+# pretty_regression(fit1)
+
+# Define function for combining pretty regressions
+clean_names <- function(df){
+  flags <- rep(FALSE, nrow(df))
+  for (i in 2:nrow(df)){
+    flags[i] <- df$Term[i] == df$Term[i-1]
+  }
+  df$Term[flags] <- ''
+  names(df)[names(df) == 'key'] <- 'Key'
+  return(df)
+}
+x <- pretty_regression(fit1) %>% 
+  mutate(regression = 1) %>%
+  bind_rows(pretty_regression(fit2) %>%
+              mutate(regression = 2)) %>%
+  bind_rows(pretty_regression(fit3) %>%
+              mutate(regression = 3)) %>%
+    mutate(Term = factor(Term,
+                       levels = c(sort(unique(Term[Term != '(Intercept)'])), '(Intercept)'))) %>%
+  arrange(Term) %>%
+  mutate(Term = as.character(Term)) %>%
+  # mutate(value = ifelse(is.na(value), '', as.character(value))) %>%
+  spread(key = regression,
+         value = value,
+         fill = '') %>%
+  mutate(Term = as.character(Term)) %>%
+    clean_names()
+# tablify(x, n = nrow(x))
+kable(x) %>% 
+  kable_styling(bootstrap_options = c("striped",
+  "hover",
+  "condensed"),
+  font_size = 6,
+  position = 'float_left') %>%
+  add_header_above(c(" " = 2, "Regression versions" = 3))
+
+```
