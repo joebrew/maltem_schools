@@ -9,32 +9,28 @@ library(RColorBrewer)
 library(waffle)
 library(gganimate)
 
-# To do for boston presentation
-
-# coefficient chart for final regression
-
-# Compare old and new datasets
-old <- read_csv('~/Desktop/performance_elisa.csv')
-old <- old[,names(old) %in% names(performance)]
-performance <- performance[,names(performance) %in% names(old)]
-performance$trimester <- as.numeric(as.character(performance$trimester))
-x = dplyr::setdiff(performance, old)
-y = old %>% 
-  group_by(name, school, year, trimester, turma, subject) %>%
-  summarise(n = length(unique(original_name)),
-            original_names = paste0(sort(unique(original_name)), collapse = ', '),
-            district = first(district)) %>%
-  ungroup %>%
-  arrange(desc(n))
-# z = performance %>% 
+# # Compare old and new datasets
+# old <- read_csv('~/Desktop/performance_elisa.csv')
+# old <- old[,names(old) %in% names(performance)]
+# performance <- performance[,names(performance) %in% names(old)]
+# performance$trimester <- as.numeric(as.character(performance$trimester))
+# x = dplyr::setdiff(performance, old)
+# y = old %>% 
 #   group_by(name, school, year, trimester, turma, subject) %>%
-#   summarise(n = n(), #length(unique(original_name)),
-#             original_names = paste0(sort(unique(original_name)), collapse = ', ')) %>%
+#   summarise(n = length(unique(original_name)),
+#             original_names = paste0(sort(unique(original_name)), collapse = ', '),
+#             district = first(district)) %>%
 #   ungroup %>%
 #   arrange(desc(n))
-y <- y %>% filter(n > 1)
-View(y)
-write_csv(y, '~/Desktop/table_with_duplicates_clarification.csv')
+# # z = performance %>% 
+# #   group_by(name, school, year, trimester, turma, subject) %>%
+# #   summarise(n = n(), #length(unique(original_name)),
+# #             original_names = paste0(sort(unique(original_name)), collapse = ', ')) %>%
+# #   ungroup %>%
+# #   arrange(desc(n))
+# y <- y %>% filter(n > 1)
+# View(y)
+# write_csv(y, '~/Desktop/table_with_duplicates_clarification.csv')
 
 # Regressions
 #####################################
