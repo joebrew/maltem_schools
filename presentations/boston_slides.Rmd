@@ -782,10 +782,19 @@ model_data <-
   mutate(period = factor(time)) %>%
   mutate(timetreat = paste0(timetreat, ' Time::Intervention')) %>%
   mutate(period = paste0(period, ' Period'))
+
+# Event study
+model_data$timetreat <- factor(model_data$timetreat,
+                               levels = c("-3 Time::Intervention",
+                                          "-2 Time::Intervention",
+                                          "-1 Time::Intervention",
+                                          "0 Time::Intervention", 
+                                          "1 Time::Intervention", 
+                                          "2 Time::Intervention"))
 fit5b <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
 # summary(fit5b)
 
-# Just math
+#  Eventy study - Just math
 fit6b <- lm(pass ~ intervention + period  + timetreat + school , data = model_data %>% filter(subject == 'Math'))
 # summary(fit6b)
 
@@ -1023,6 +1032,138 @@ absenteeism reduction, the next outcome to investigate;
 ## Obrigado!
 
 <img src="img/tree.jpg" alt="img/tree.jpg" style="width: 600px; align="center"/>
+
+## A slide on equity
+
+```{r}
+x <- performance %>%
+  filter(!is.na(census_name)) %>%
+  left_join(census %>%
+              dplyr::select(census_name, 
+                            ses_asset_score,
+                            ses_conditions_score,
+                            ses_education_household,
+                            ses_occupation_household)) %>%
+  left_join(students %>%
+              dplyr::select(name,
+                            in_performance_2015,
+                            in_performance_2016)) %>%
+  # filter(in_performance_2015, in_performance_2016) %>%
+  mutate(ses = ifelse(ses_conditions_score > quantile(ses_conditions_score, 0.75, na.rm = TRUE), 'high', ifelse(ses_conditions_score > quantile(ses_conditions_score, 0.25, na.rm = TRUE), 'medium', ifelse(ses_conditions_score <= quantile(ses_conditions_score, 0.25, na.rm = TRUE), 'low', NA)))) %>%
+  filter(!is.na(ses)) %>%
+  mutate(ses = factor(ses, levels = c('low', 'medium', 'high'))) %>%
+  group_by(ses, district) %>%
+  summarise(val_2015 = mean(value[year == 2015], na.rm = TRUE),
+            val_2016 = mean(value[year == 2016], na.rm = TRUE)) %>%
+  ungroup %>%
+  mutate(improvement = val_2016 - val_2015)
+
+g1 <- ggplot(data = x,
+       aes(x = district, 
+           y = improvement)) +
+  geom_bar(stat = 'identity',
+           alpha = 0.6,
+           fill = 'darkorange',
+           color = 'black') +
+  facet_wrap(~ses) +
+  theme_cism()
+
+# Standardize
+rel <- x %>%
+  group_by(ses) %>%
+  mutate(improvement = improvement / 
+           improvement[district == 'Manhiça'])
+
+g2 <- ggplot(data = rel,
+       aes(x = district, 
+           y = improvement)) +
+  geom_bar(stat = 'identity') +
+  facet_wrap(~ses) +
+  theme_cism()
+
+# Rmisc::multiplot(g1, g2)
+g1 +
+  labs(x = 'District',
+       y = 'Improvement from 2015 to 2016 (0-20)',
+       title = 'Non-equitable effect of malaria intervention',
+       subtitle = 'Everyone in Magude benefits, but some more than others') +
+  geom_label(aes(x = district,
+                 y = improvement,
+                 label = round(improvement, 2)))
+```
+
+
+## A slide on sex
+
+```{r}
+x <- performance %>%
+  filter(!is.na(census_name)) %>%
+  left_join(census %>%
+              dplyr::select(census_name, 
+                            sex)) %>%
+  left_join(students %>%
+              dplyr::select(name,
+                            in_performance_2015,
+                            in_performance_2016)) %>%
+  # filter(in_performance_2015, in_performance_2016) %>%
+  filter(!is.na(sex)) %>%
+  group_by(sex, district) %>%
+  summarise(val_2015 = mean(value[year == 2015], na.rm = TRUE),
+            val_2016 = mean(value[year == 2016], na.rm = TRUE)) %>%
+  ungroup %>%
+  mutate(improvement = val_2016 - val_2015)
+
+g1 <- ggplot(data = x,
+       aes(x = sex, 
+           y = improvement)) +
+  geom_bar(stat = 'identity',
+           alpha = 0.6,
+           fill = 'darkorange',
+           color = 'black') +
+  facet_wrap(~district) +
+  theme_cism()
+g1 +
+  labs(x = 'Sex',
+       y = 'Improvement from 2015 to 2016 (0-20)',
+       title = 'Non-equitable effect of malaria intervention',
+       subtitle = 'Everyone in Magude benefits, but some more than others') +
+  geom_label(aes(x = sex,
+                 y = improvement,
+                 label = round(improvement, 2)))
+```
+
+## Chickens
+
+```{r}
+x <- performance %>%
+  filter(!is.na(census_name)) %>%
+  left_join(census %>%
+              dplyr::select(census_name, 
+                            n_chickens)) %>%
+  left_join(students %>%
+              dplyr::select(name,
+                            in_performance_2015,
+                            in_performance_2016)) %>%
+  filter(!is.na(n_chickens)) %>%
+  mutate(n_chickens = ifelse(n_chickens == 0, '00',
+                                    ifelse(n_chickens < 20, '01-20',
+                                           '21+'))) %>%
+  group_by(n_chickens) %>%
+  summarise(val_2015 = mean(value[year == 2015], na.rm = TRUE),
+            val_2016 = mean(value[year == 2016], na.rm = TRUE)) %>%
+  ungroup %>%
+  mutate(improvement = val_2016 - val_2015)
+
+ggplot(data = x,
+       aes(x = n_chickens,
+           y = improvement)) +
+  geom_point(alpha = 0.6) +
+  theme_cism() +
+  geom_line(aes(group = 1),
+            alpha = 0.6)
+
+```
+
 
 # Additional slides
 
