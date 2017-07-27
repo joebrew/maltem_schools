@@ -529,7 +529,6 @@ if('prepared_data.RData' %in% dir('data')){
   #######
   performance <- read_csv('data/performance_7_june_extra_rows_removed.csv')
   
-
   # Manual corrections as indicated by Laia
   performance$`Study Subject ID` <-
     gsub('3 DE FEVEREIRO_2015_2_E',
@@ -829,7 +828,9 @@ if('prepared_data.RData' %in% dir('data')){
   performance <-
     performance %>%
     mutate(name = nome_E2_C4) %>%
+    rename(serial_number = serialno_E2_C4) %>%
     dplyr::select(`Study Subject ID`,
+                  serial_number,
                   name, 
                   district,
                   school,
@@ -1012,9 +1013,9 @@ if('prepared_data.RData' %in% dir('data')){
   ab <- ab %>%
     filter(!is.na(date))
   
-  # Remove those which took place on weekends
-  ab <- ab %>%
-    filter(! dow %in% c('Saturday', 'Sunday'))
+  # # Remove those which took place on weekends
+  # ab <- ab %>%
+  #   filter(! dow %in% c('Saturday', 'Sunday'))
   
   # # Standardize school names
   # # # cat(paste0('"', sort(unique(ab$school)), '"', collapse = ',\n'))
@@ -1133,7 +1134,9 @@ if('prepared_data.RData' %in% dir('data')){
   
   # Cut down to only necessary variables
   ab <- ab %>%
+    rename(serial_number = serialno_E1_C1) %>%
     dplyr::select(`Study Subject ID`,
+                  serial_number,
                   name,
                   district,
                   school,

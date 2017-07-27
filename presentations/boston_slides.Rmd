@@ -1289,18 +1289,52 @@ x <- x@data
 # Get performance by school by year
 y <- performance %>%
   group_by(school, year) %>%
-  summarise(val = mean(value, na.rm = TRUE)) %>%
+  summarise(val = mean(value, na.rm = TRUE),
+            n = length(unique(name))) %>%
   group_by(school) %>%
-  summarise(dif = val[year == 2016] - val[year == 2015])
+  summarise(dif = val[year == 2016] - val[year == 2015],
+            n = first(n))
 
 # Join together
 x <- left_join(x, y)
 
+aprop <- performance %>%
+            left_join(x) %>%
+            filter((distance >= -10 &
+                     distance <= 10 &
+                   district == 'Manhiça')  |
+                     district == 'Magude')
+fit <- lm(value ~ district + factor(year) + district*factor(year),
+          data = aprop)
+summary(fit)
+
+lluny <- performance %>%
+            left_join(x) %>%
+            filter((distance >= 10 &
+                   district == 'Manhiça')  |
+                     district == 'Magude')
+fit <- lm(value ~ district + factor(year) + district*factor(year),
+          data = lluny)
+summary(fit)
+
+  # mutate(district= factor(district, levels = c('Manhiça', 'Magude')))
+lluny <- performance %>%
+            left_join(x) %>%
+  mutate(distance = as.numeric(as.character(distance))) %>%
+            dplyr::filter(distance <= -10 |
+                     distance >= 10) %>%
+  mutate(district= factor(district, levels = c('Manhiça', 'Magude')))
+fit <- lm(value ~ district + factor(year) + district*factor(year),
+          data = lluny)
+summary(fit)
+
+
+
 ggplot(data = x,
        aes(x = distance,
            y = dif)) +
-  geom_point(aes(color = district), 
-             size = 3,
+  geom_point(aes(color = district,
+                 size = n), 
              alpha = 0.6) +
   labs(x = 'Kilometers from intervention area',
        y = 'Improvement from 2015 to 2016in averge grade') +
