@@ -893,8 +893,6 @@ if('prepared_data.RData' %in% dir('data')){
          'JOSINA MACHEL',
          ab$`Study Subject ID`)
   
-  # 
-  
   # Manual corrections as indicated by Laia
   ab$`Study Subject ID` <-
     gsub('3 DE FEVEREIRO_2015_2_E',
@@ -979,7 +977,7 @@ if('prepared_data.RData' %in% dir('data')){
   ab <- left_join(x = ab,
                   y = month_matcher,
                   by = 'month_name')
-  rm(month_matcher)
+  # rm(month_matcher)
   
   # Get day number
   ab$day_number <- 
@@ -1017,56 +1015,6 @@ if('prepared_data.RData' %in% dir('data')){
   # ab <- ab %>%
   #   filter(! dow %in% c('Saturday', 'Sunday'))
   
-  # # Standardize school names
-  # # # cat(paste0('"', sort(unique(ab$school)), '"', collapse = ',\n'))
-  # school_standardizer <-
-  #   data_frame(school = c("1 E 2 GRAU XINAVANE",
-  #                         "1E 2 GRAU XINAVANE",
-  #                         "3 DE FEVEREIRO",
-  #                         "3 DE FEVEREIRO ",
-  #                         "3 DE FEVREIRO",
-  #                         "DUCA",
-  #                         "DUCO",
-  #                         "EPC GRACA MACHEL",
-  #                         "GRACA MACHEL",
-  #                         "ILHA",
-  #                         "ILHA JOSINA",
-  #                         "JOSINA",
-  #                         "JOSINA MACHEL",
-  #                         "MAGUIGUANA",
-  #                         "MARAGRA",
-  #                         "MOINE",
-  #                         "SIMBE",
-  #                         "XINAVANE",
-  #                         "XINAVENE",
-  #                         "XIVANANE"),
-  #              new_school = c('Xinavane', 
-  #                             'Xinavane',
-  #                             '3 de Fev',
-  #                             '3 de Fev',
-  #                             '3 de Fev',
-  #                             'Duco',
-  #                             'Duco',
-  #                             'Graca Machel',
-  #                             'Graca Machel',
-  #                             'Ilha Josina',
-  #                             'Ilha Josina',
-  #                             'Ilha Josina',
-  #                             'Ilha Josina',
-  #                             'Maguiguana',
-  #                             'Maragra',
-  #                             'Moine',
-  #                             'Simbe',
-  #                             'Xinavane',
-  #                             'Xinavane',
-  #                             'Xinavane'))
-  # ab <- left_join(x = ab,
-  #                 y = school_standardizer,
-  #                 by = 'school') %>%
-  #   dplyr::select(-school) %>%
-  #   rename(school = new_school) %>%
-  #   filter(!is.na(school))
-  # rm(school_standardizer)
   ab <-
     ab %>%
     mutate(school = ifelse(grepl('GRACA|GRAÇA', school), 'GRACA MACHEL',
@@ -1153,46 +1101,17 @@ if('prepared_data.RData' %in% dir('data')){
                   turma,
                   absent)
   
-  # # Standardize school names to match those in performance
-  # school_dictionary <- data_frame(school = c('3 de Fev',
-  #                                            'Duco',
-  #                                            'Graca Machel',
-  #                                            'Ilha Josina',
-  #                                            'Maguiguana',
-  #                                            'Maragra',
-  #                                            'Moine',
-  #                                            'Simbe',
-  #                                            'Xinavane'),
-  #                                 new_school = c('3 DE FEV',
-  #                                                'DUCO',
-  #                                                'GRACA MACHEL',
-  #                                                'ILHA JOSINA',
-  #                                                'MAGUIGUANA',
-  #                                                'MARAGRA',
-  #                                                'MOINE',
-  #                                                'SIMBE',
-  #                                                'XINAVANE'))
+  # # Clean up oddities # For now, leaving these
   # ab <-
   #   ab %>%
-  #   left_join(school_dictionary,
-  #             by = 'school') %>%
-  #   mutate(school = new_school) %>%
-  #   dplyr::select(-new_school)
-  
-  # # Remove unecessary objects
-  # rm(school_dictionary)
-  
-  # Clean up oddities
-  ab <-
-    ab %>%
-    mutate(letter = ifelse(letter %in% c('1', '6', '7', '8', '9', 'T'), NA,
-                           ifelse(letter == 'UNICA', 'U',
-                                  letter))) %>%
-    mutate(letter = ifelse(letter == 'U', 'A', letter))
-  ab <- ab %>%
-    mutate(number = ifelse(number > 5, NA, number)) %>%
-    filter(!is.na(number),
-           !is.na(letter))
+  #   mutate(letter = ifelse(letter %in% c('1', '6', '7', '8', '9', 'T'), NA,
+  #                          ifelse(letter == 'UNICA', 'U',
+  #                                 letter))) %>%
+  #   mutate(letter = ifelse(letter == 'U', 'A', letter))
+  # ab <- ab %>%
+  #   mutate(number = ifelse(number > 5, NA, number)) %>%
+  #   filter(!is.na(number),
+  #          !is.na(letter))
   
   #####
   # SCHOOL LOCATIONS
@@ -1726,20 +1645,6 @@ if('prepared_data.RData' %in% dir('data')){
     })
   }
   
-  ## Bring id into the other datasets
-  
-  # No longer using student id
-  # ab <-
-  #   left_join(ab,
-  #             students %>%
-  #               dplyr::select(name, id),
-  #             by = 'name')
-  # performance <-
-  #   left_join(performance,
-  #             students %>%
-  #               dplyr::select(name, id),
-  #             by = 'name')
-  
   # Combine students and census (and just get rid of census)
   students <- 
     left_join(students,
@@ -1906,8 +1811,6 @@ if('prepared_data.RData' %in% dir('data')){
   # remove duplicates
   ab <- ab %>%
     mutate(dummy = 1) %>%
-    # arrange(date, name, district) %>%
-    # group_by(date, name, district) %>%
     arrange(date, original_name, district) %>%
     group_by(date, original_name, district) %>%
     mutate(cs_dummy = cumsum(dummy)) %>%
@@ -1925,6 +1828,47 @@ if('prepared_data.RData' %in% dir('data')){
     students %>%
     filter(!duplicated(name))
   
+  # MANUAL CHANGES  
+  ab <- ab %>% filter(serial_number != 100872)
+  ab <- ab %>%
+    filter(serial_number != 478557) %>%
+    mutate(letter = ifelse(grepl('3 DE FEVEREIRO_2015_5_E', `Study Subject ID`), 'A', letter),
+           turma = ifelse(grepl('3 DE FEVEREIRO_2015_5_E', `Study Subject ID`), '5-A', turma)) %>%
+    filter(!grepl('DUCA_2016_4_A', `Study Subject ID`))
+#   
+#   *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis- only talking about absenteeism datasets
+#   
+#   drop if school=="GRACA MACHEL"&year==2015&turma=="1-C"
+#   drop if school=="MAGUIGUANA"&year==2016&turma=="1-C"
+#   drop if school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="aug"
+#   drop if school=="GRACA MACHEL"&year==2015&turma=="2-A"
+#   drop if school=="MAGUIGUANA"&year==2015&turma=="3-A"
+#   drop if school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="aug"
+#   drop if school=="MARAGRA"&year==2015&turma=="1-D"
+  # *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis
+  # Laia will look at this to see if we can potentially salvage some
+  ab <- ab %>%
+    mutate(flag = 
+             ifelse(school=="GRACA MACHEL"&year==2015&turma=="1-C" |
+                      school=="GRACA MACHEL"&year==2015&turma=="2-A" |
+                      school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="aug" |
+                      school=="3 DE FEV"&year==2016&turma=="1-A"&month_name=="set"|month_name=="out"|
+                      school=="3 DE FEV"&year==2015&turma=="3-A"|
+                      school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="aug"|
+                      school=="MARAGRA"&year==2015&turma=="1-D",
+                    TRUE, FALSE)) %>%
+    filter(!flag) %>%
+    dplyr::select(-flag)
+
+#   **** correcting some years (2015 and 2016)
+#   replace year=2016 if regexm(studysubjectid, "DUCO_2016_4_A_")
+  ab <- ab %>%
+    mutate(year = ifelse(!grepl('DUCO_2016_4_A_', `Study Subject ID`),
+                         2016, year))
+  
+  ab <- ab %>%
+    filter(!grepl("3 DE FEVEREIRO_2015_5_A_", `Study Subject ID`))
+
   # Apply the manual fixes / corrections emailed by Laia
   ab <-
     ab %>%
@@ -1994,7 +1938,7 @@ if('prepared_data.RData' %in% dir('data')){
            performance$letter)
   
   # Create a "turma" variable in absenteeism
-  ab$turma <
+  ab$turma <-
     paste0(ab$number,
            '-',
            ab$letter)
@@ -2113,136 +2057,21 @@ if('prepared_data.RData' %in% dir('data')){
 
   # Final cleaning to absenteeism -----------------------------
   ab$day <- as.numeric(format(ab$date, '%d'))
-  # NOT IMPLEMENTING THE BELOW YET, SINCE IT CREATES LOTS OF WEEKENDS! (Laia needs to review manually)
-  # ab <- ab %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="abr"&turma=="2-A",
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="jun"&turma=="3-A"&day>26,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day==5|day==6,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="2-A"&day==27,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day==8|day==9|day==10|day==11,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="abr"&turma=="5-B"&day==19|day==20,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16|day==1,
-  #                        date +2, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day==16|day==17|day==18|day==19|day==20,
-  #                        date - 2, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day==26|day==27, 
-  #                        date +2, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-A"&day==27,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-A"&day==4|day==11|day==18,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>7&day<27,
-  #                        date - 3, date)) %>%
-  #   mutate(date = ifelse(school=="MOINE"&year==2015&month_name=="jun"&turma=="5-A"&day==21|day==22,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="4-B",
-  #                        date -3, date)) %>%
-  #   mutate(date = ifelse(school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="3-A",
-  #                        date - 3, date)) %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2015&month_name=="abr"&turma=="2-A",
-  #                        date + 1, date)) %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="abr"&turma=="4-A",
-  #                        date - 2, date)) %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="out"&turma=="4-A"&day==23|day==24, 
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="DUCO"&year==2016&month_name=="abr"&turma=="5-A"&day==3|day==4,
-  #                        date + 1, date)) %>%
-  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="1-A"&day>23&day<29,
-  #                        date +1, date)) %>%
-  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="jun"&turma=="1-B"&day>17&day<22,
-  #                        date +2, date)) %>%
-  #   mutate(date = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day==5|day==6,
-  #                        date +1, date))
-  # THE FOLLOWING WAS ALSO CARRIED OUT IN STATA, BUT IGNORING FOR NOW SINCE IT GENERATES WEEKENDS
-  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>7&day<12
-  # replace day=day-3 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>14&day<31
-  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16
-  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="abr"&turma=="5-B"&day==19|day==20
-  # replace day=day-1 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day==18
-  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="mar"&turma=="2-UNICA"&day>5&day<12
-  # replace day=day+1 if school=="3 DE FEV"&year==2016&month_name=="out"&turma=="1-A"&day==16
-  # replace day=day+1 if school=="3 DE FEV"&year==2016&month_name=="out"&turma=="1-A"&day==16
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="4-B"&day>7&day<32
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-B"&day>5&day<32
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="may"&turma=="4-B"&day>6&day<32
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="jul"&turma=="4-B"&day>3&day<32
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="jun"&turma=="4-B"&day>3&day<30
-  # replace day=day-3 if school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="4-B"&day>4&day<31
-  # replace day=day+2 if school=="3 DE FEV"&year==2016&month_name=="set"&turma=="4-E"&day>0&day<4
-  # replace day=day-2 if school=="3 DE FEV"&year==2016&month_name=="mar"&turma=="5-B"&day>15&day<21
-  # replace day=day-3 if school=="ILHA JOSINA"&year==2015&month_name=="jul"&turma=="1-A"&day>3&day<32
-  # replace day=day+2 if school=="ILHA JOSINA"&year==2015&month_name=="jun"&turma=="4-C"&day>0&day<30
-  # replace day=day+1 if school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="5-A"&day>12&day<31
-  # replace day=day+1 if school=="ILHA JOSINA"&year==2016&month_name=="jul"&turma=="5-C"&day>23&day<29
-  # replace day=day+1 if school=="MARAGRA"&year==2015&month_name=="mar"&turma=="2-B"&day==1
-  # replace day=day+2 if school=="MARAGRA"&year==2015&month_name=="ago"&turma=="2-C"&day==1|day==2
-  # replace day=day+1 if school=="MARAGRA"&year==2016&month_name=="abr"&turma=="5-F"&day==24
-  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="jun"&turma=="1-A"&day>4&day<10
-  # replace day=day-2 if school=="XINAVANE"&year==2015&month_name=="jul"&turma=="3-A"&day>7&day<20
-  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="jun"&turma=="3-A"&day>25&day<31
-  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="oct"&turma=="4-C"&day>1&day<14
-  # replace day=day+1 if school=="XINAVANE"&year==2016&month_name=="oct"&turma=="4-C"&day>8&day<12
-  # replace day=day+1 if school=="DUCO"&year==2015&month_name=="abr"&turma=="2-UNICA"&day>11&day<16
-  # replace day=day-1 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>13&day<16
-  # replace day=day-3 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day==18
-  # replace day=day-2 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>19&day<25
-  # replace day=day-2 if school=="DUCO"&year==2016&month_name=="abr"&turma=="4-UNICA"&day>26&day<32
-  # replace day=day+1 if school=="DUCO"&year==2016&month_name=="oct"&turma=="4-UNICA"&day>22&day<25
-  # replace day=day+1 if school=="DUCO"&year==2016&month_name=="abr"&turma=="5-UNICA"&day>2&day<5
-  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>1&day<6
-  # replace day=day-2 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>8&day<12
-  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>15&day<18
-  # replace day=day-1 if school=="GRACA MACHEL"&year==2015&month_name=="set"&turma=="1-C"&day>22&day<25
-  # replace day=day+1 if school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day>4&day<7
-  # replace day=day+1 if school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="1-A"&day>23&day<29
-  # replace day=day+2 if school=="GRACA MACHEL"&year==2016&month_name=="jun"&turma=="1-B"&day>17&day<22
-  # replace day=day-2 if school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="2-C"&day==24
-  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day>7&day<12
-  # replace day=day+3 if school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&day>12&day<18
-  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>15&day<21
-  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>22&day<28
-  # replace day=day-2 if school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&day>7&day<12
-  # replace day=day-3 if school=="MAGUIGUANA"&year==2015&month_name=="out"&turma=="3-B"&day>14&day<27
-  # replace day=day+1 if school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16
-  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day>17&day<23
-  # replace day=day+3 if school=="SIMBE"&year==2016&month_name=="set"&turma=="1-UNICA"&day==3
-  # replace day=day+1 if school=="SIMBE"&year==2016&month_name=="mar"&turma=="2-UNICA"&day>5&day<11
-  # replace day=day-2 if school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="2-UNICA"&day>5&day<11
-  # 
-  # ab$date <- as.Date(ab$date, origin = '1970-01-01')
-  # ab <- ab %>%
-  #   # Regenerate all the date-related variables
-  #   mutate(year = as.numeric(format(date, '%Y'))) %>%
-  #   mutate(year_term = paste0(year, '-', term)) %>%
-  #   mutate(month = date_truncate(date, 'month')) %>%
-  #   dplyr::select(-month_number) %>%
-  #   mutate(month_number = as.numeric(format(date, '%m'))) %>%
-  #   left_join(month_matcher) %>%
-  #   mutate(dow = weekdays(date)) %>%
-  #   mutate(day = as.numeric(format(date, '%d')))
-  # If we re-introduce the date shifts from about 15 lines up, then we'll
-   # also need to remove weekends here !!!!!!!!!!!!!!!!!!
-  
-  # *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis
-  # Laia will look at this to see if we can potentially salvage some
+
+  ab$date <- as.Date(ab$date, origin = '1970-01-01')
   ab <- ab %>%
-    mutate(flag = 
-             ifelse(school=="GRACA MACHEL"&year==2015&turma=="1-C" |
-                      school=="GRACA MACHEL"&year==2015&turma=="2-A" |
-                      school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="aug" |
-                      school=="3 DE FEV"&year==2016&turma=="1-A"&month_name=="set"|month_name=="out"|
-                      school=="3 DE FEV"&year==2015&turma=="3-A"|
-                      school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="aug"|
-                      school=="MARAGRA"&year==2015&turma=="1-D",
-                    TRUE, FALSE)) %>%
-    filter(!flag) %>%
-    dplyr::select(-flag)
+    # Regenerate all the date-related variables
+    mutate(year = as.numeric(format(date, '%Y'))) %>%
+    mutate(year_term = paste0(year, '-', term)) %>%
+    mutate(month = date_truncate(date, 'month')) %>%
+    dplyr::select(-month_number) %>%
+    mutate(month_number = as.numeric(format(date, '%m'))) %>%
+    left_join(month_matcher) %>%
+    mutate(dow = weekdays(date)) %>%
+    mutate(day = as.numeric(format(date, '%d')))
+
+  
+ 
   
   ab$n <- NULL
   # Re-check for duplicates
