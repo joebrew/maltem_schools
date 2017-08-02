@@ -1863,7 +1863,7 @@ if('prepared_data.RData' %in% dir('data')){
 #   **** correcting some years (2015 and 2016)
 #   replace year=2016 if regexm(studysubjectid, "DUCO_2016_4_A_")
   ab <- ab %>%
-    mutate(year = ifelse(!grepl('DUCO_2016_4_A_', `Study Subject ID`),
+    mutate(year = ifelse(grepl('DUCO_2016_4_A_', `Study Subject ID`),
                          2016, year))
   
   ab <- ab %>%
@@ -2071,7 +2071,9 @@ if('prepared_data.RData' %in% dir('data')){
     mutate(day = as.numeric(format(date, '%d')))
 
   
- 
+  ab <- ab %>%
+    mutate(year = ifelse(grepl('DUCO_2016_4_A_', `Study Subject ID`),
+                         2016, year))
   
   ab$n <- NULL
   # Re-check for duplicates
@@ -2091,6 +2093,9 @@ if('prepared_data.RData' %in% dir('data')){
    performance <-
      performance %>%
      filter(!is.na(subject))
+   
+
+   
   
   save(ab,
        census,
