@@ -1,0 +1,97 @@
+---
+title: "Impact of a malaria elimination on school outcomes"
+author: "Author one and Author Two"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output:
+  bookdown::tufte_html2:
+    number_sections: no
+    toc: yes
+  bookdown::pdf_document2:
+    includes:
+      before_body: doc_prefix.tex
+      in_header: preamble.tex
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: no
+    toc: no
+  bookdown::word_document2: null
+fontsize: 12pt
+link-citations: yes
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/global-ecology-and-biogeography.csl
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+# Basic knitr options
+knitr::opts_chunk$set(comment = NA, 
+               echo = FALSE, 
+               warning = FALSE, 
+               message = FALSE, 
+               error = TRUE, # Render report, even with errors
+               cache = F)
+```
+
+```{r}
+source("prepare_student_data.R")
+```
+
+
+# Introduction
+
+
+
+## Context
+
+## Literature
+
+This is the first reference we do have [@Grant2013]
+
+## Ethics
+
+# Methods
+
+## Data collection 
+
+## Data cleaning
+
+## Analysis
+
+# Results
+
+Table of absenteeism by year and district
+
+```{r}
+table(ab$year, ab$district)
+```
+
+## Performance
+
+## Absenteeism
+
+```{r, fig.align='center'}
+
+# Absenteeism by month by district
+x <- 
+  ab %>%
+  group_by(district, year_term) %>%
+  summarise(presences = length(which(!absent)),
+            absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!grepl('NA', year_term))
+  
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_line() +
+  geom_point(aes(size = eligibles),
+             alpha = 0.6) +
+  geom_vline(xintercept = 3.5, color = 'black')
+
+```
+
+
+# Discussion
