@@ -556,7 +556,7 @@ x <- performance %>%
   mutate(val = round(val, digits = 2))
 
 xt <- x %>% spread(key = year, value = val)
-# tablify(xt)
+tablify(xt)
 ```
 
 
@@ -713,7 +713,6 @@ ggplot(data = x %>% mutate(year = factor(year)),
 
 
 ```{r}
-
 # Passed trimester exam
 model_data <- performance %>%
   mutate(pass = ifelse(value >= 10, 1, 0),

@@ -1,24 +1,27 @@
 ---
 title: "Impact of a malaria elimination on school outcomes"
-author: "Author one and Author Two"
-date: '`r format(Sys.time(), "%d %B, %Y")`'
-output:
-  bookdown::tufte_html2:
-    number_sections: no
-    toc: yes
-  bookdown::pdf_document2:
-    includes:
-      before_body: doc_prefix.tex
-      in_header: preamble.tex
-    keep_tex: yes
-    latex_engine: xelatex
-    number_sections: no
-    toc: no
-  bookdown::word_document2: null
-fontsize: 12pt
-link-citations: yes
-csl: https://raw.githubusercontent.com/citation-style-language/styles/master/global-ecology-and-biogeography.csl
+author:
+  - name: Laia Cirera
+    email: alice@example.com
+    affiliation: Some Institute of Technology
+    corresponding: alice@example.com
+  - name: Joe Brew
+    email: bob@example.com
+    affiliation: Another University
+address:
+  - code: Some Institute of Technology
+    address: Department, Street, City, State, Zip
+  - code: Another University
+    address: Department, Street, City, State, Zip
+abstract: |
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+  
+author_summary: |
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+always_allow_html: yes
 bibliography: bibliography.bib
+output: rticles::plos_article
+csl: plos.csl
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +35,24 @@ knitr::opts_chunk$set(comment = NA,
 ```
 
 ```{r}
+library(ggthemes)
+library(ggrepel)
+library(kableExtra)
+library(knitr)
+
+# Get school data
 source("prepare_student_data.R")
+
+# Run simulations for estimating the likelihood of 
+# certain "uninterrupted" chains of events
+# (we use this to justify some of our cleaning steps)
+source('simulations.R')
+
+# Get some helper functions
+source('helpers.R')
+
+# Define a theme for the visuals
+theme_paper <- function(){ggthemes::theme_tufte()}
 ```
 
 
@@ -41,6 +61,59 @@ source("prepare_student_data.R")
 
 
 ## Context
+
+```{r}
+cols <- c('darkorange', 'darkgreen')
+moz2_fortified <- moz2_fortified
+map <- moz2_fortified %>%
+  filter(id %in% c('Manhiça',
+                   'Magude'))
+g <- ggplot() +
+  geom_polygon(data = map,
+               aes(x = long,
+                   y = lat,
+                   group = id,
+                   fill = id),
+               color = 'white',
+               # color = 'grey',
+               alpha = 0.8) +
+  theme_map() +
+  scale_fill_manual(name = '',
+                    values = cols) +
+  # theme_black(base_size = 0) +
+  theme(axis.line = element_blank(), axis.text = element_blank(),
+        axis.ticks = element_blank(), axis.title = element_blank(),
+        legend.position = 'none') +
+  theme_map() +
+  theme_paper() 
+# print(g) +
+#     geom_point(data = geo,
+#              aes(x = lng,
+#                  y = lat),
+#              color = 'black',
+#              alpha = 0.7,
+#              size = 3)
+```
+
+
+```{r}
+g +
+  geom_point(data = census,
+             aes(x = longitude,
+                 y = latitude),
+             alpha = 0.2,
+             col = 'darkred',
+             size = 0.1) +
+  geom_point(data = geo,
+             aes(x = lng,
+                 y = lat),
+             color = 'black',
+             alpha = 0.7,
+             size = 3) +
+  labs(title = 'Intervention and control areas',
+       x = '', y = '')
+```
+
 
 ## Literature
 
@@ -54,19 +127,410 @@ This is the first reference we do have [@Grant2013]
 
 ## Data cleaning
 
+We used Monte Carlo simulations to determine the likelihood of uninterrupted "chains" of presences and absences, and removed those which exceeded a likelihood of 0.1%.
+
+```{r}
+plot(sims$consec, sims$p)
+```
+
 ## Analysis
+
+### Difference in differences
+
+In diff-diff models: assumption: parallel trends (in the outcome variable) in treatment and
+control groups before the introduction of the intervention
+
+
+### Event study model
+
+The coefficients for the interaction between trimester and intervention area identify the differential trends in the outcome variable over
+time between the treated and control regions. Thus, as the policy is implemented in
+2016, these coefficients identify any differential pre-trends in the outcome variable
+between treated and control regions (the crucial assumption for diff-diff models).
 
 # Results
 
-Table of absenteeism by year and district
+## Descriptive
+
+The districts are similar.
+
 
 ```{r}
-table(ab$year, ab$district)
+# Make table comparing manhica and magude
+x <- students %>%
+  left_join(census %>%
+              filter(!duplicated(perm_id)))
+
+# Get info on sex, age, etc.
+y <- x %>%
+  mutate(district = factor(district, levels = c('Manhiça', 'Magude'))) %>%
+  group_by(district) %>%
+  mutate(age = (as.numeric(as.Date('2016-01-01') - dob)) / 365.25) %>%
+  summarise(males = length(which(sex == 'M')),
+            females = length(which(sex == 'F')),
+            # distance_to_school_mean = mean(km_to_school, na.rm = TRUE),
+            # distance_to_school_sd = sd(km_to_school, na.rm = TRUE),
+            siblings_mean = mean(n_children_agregado, na.rm = TRUE),
+            siblings_sd = sd(n_children_agregado, na.rm = TRUE),
+            education_mean = mean(ses_education_household, na.rm = TRUE),
+            education_sd = sd(ses_education_household, na.rm = TRUE),
+            age_mean = mean(age, na.rm = TRUE),
+            age_sd = sd(age, na.rm = TRUE),
+            conditions_score_mean = mean(ses_conditions_score, na.rm = TRUE),
+            conditions_score_sd = sd(ses_conditions_score, na.rm = TRUE),
+            ses_asset_score_mean = mean(ses_asset_score, na.rm = TRUE),
+            ses_asset_score_sd = sd(ses_asset_score, na.rm = TRUE),
+            identified = length(which(!is.na(district_census))),
+            n = n())  %>%
+  mutate(p_identified = identified / n * 100)
+y <- y %>%
+  gather(key, value, males:p_identified) %>%
+  mutate(value = round(value, digits = 2)) %>%
+  spread(key = district, value = value) %>%
+  mutate(key = gsub('sd', 'SD', key)) %>%
+  mutate(key = Hmisc::capitalize(gsub('_', ' ', key))) %>%
+  rename(Characteristic = key)
+y <- y %>% filter(!grepl('Conditions', Characteristic),
+                  !grepl('dentified', Characteristic))
+kablify(y, size = 14)
 ```
 
-## Performance
+Bla bla bla.
 
-## Absenteeism
+
+```{r}
+x <- performance %>%
+  group_by(district, year) %>% 
+  summarise(val = mean(value)) %>%
+  dplyr::select(district, year, val) %>%
+    mutate(val = round(val, digits = 2)) %>%
+  rename(`Average grade` = val)
+y <- ab %>%
+  group_by(district, year) %>% 
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  dplyr::select(district, year, absenteeism_rate) %>%
+  mutate(absenteeism_rate = round(absenteeism_rate, digits = 2)) %>%
+  rename(`Absenteeism rate` = absenteeism_rate)
+x <- left_join(x,y)
+x <- gather(x, key, value, `Average grade`: `Absenteeism rate`)
+xt <- x %>% spread(key = key, value = value)
+names(xt) <- Hmisc::capitalize(names(xt))
+tablify(xt)
+```
+
+```{r}
+ggplot(data = performance,
+       aes(x = value,
+           group = district,
+           fill = district)) +
+  facet_wrap(~subject) +
+  geom_density(n = 23,
+               alpha = 0.4) +
+  theme_paper() +
+  labs(x = 'Grade (0-20)',
+       y = 'Density') +
+    theme(strip.background = element_rect(fill=NA),
+        strip.text = element_text(color = 'darkgreen', size = 10),
+        panel.border = element_blank()) +
+  scale_fill_manual(name = 'District',
+                    values = c('darkorange', 'darkgreen'))
+```
+
+Percentage passing, bla bla bla.
+
+
+```{r}
+x <- performance %>%
+  group_by(district, year) %>% 
+  summarise(val = length(which(value >= 10)) / length(value) * 100) %>%
+  dplyr::select(district, year, val) %>%
+  mutate(val = round(val, digits = 2))
+xt <- x %>% spread(key = year, value = val)
+cols <- c('darkorange', 'darkgreen')
+ggplot(data = x %>% mutate(year = factor(year)),
+       aes(x = year,
+           y = val,
+           color = district,
+           group = district)) +
+    geom_point(size = 5) +
+  geom_line(lty = 3, alpha = 0.5) +
+  theme_paper() +
+  scale_color_manual(name = '',
+                     values = cols) +
+  geom_vline(xintercept = 3.5,
+             alpha = 0.6,
+             color = 'darkred',
+             lty = 1) +
+  # ylim(0, max(x$val) * 1.05) +
+  labs(x = 'Trimester',
+       y = 'Percentage passing') #+
+  # geom_label_repel(aes(label = paste0(round(val, 1), '%')),
+  #                  show.legend = FALSE)
+```
+
+Mean grade obtained, all subjects
+
+```{r}
+x <- performance %>%
+  group_by(district, year) %>% 
+  summarise(val = mean(value)) %>%
+  dplyr::select(district, year, val) %>%
+    mutate(val = round(val, digits = 2))
+cols <- c('darkorange', 'darkgreen')
+ggplot(data = x %>% mutate(year = factor(year)),
+       aes(x = year,
+           y = val,
+           color = district,
+           group = district)) +
+  geom_point(size = 4, alpha = 0.7) +
+  geom_line(lty = 2,
+            alpha = 0.4) +
+  theme_paper() +
+  scale_color_manual(name = '',
+                     values = cols) +
+  # ylim(0, max(x$val) * 1.05) +
+  labs(x = 'Year',
+       y = 'Average grade') +
+  geom_label_repel(aes(label = paste0(round(val, 2))),
+                   show.legend = FALSE,
+                   alpha = 0.5,
+                   size = 2) +
+  geom_vline(xintercept = 3.5,
+             color = 'darkred',
+             alpha = 0.6,
+             lty = 2,
+             size = 1) +
+    geom_vline(xintercept = 1.5,
+             color = 'darkred',
+             alpha = 0.6,
+             lty = 2,
+             size = 1)
+```
+
+## Analytical
+
+
+```{r}
+# Regressions
+
+# Passed trimester exam
+model_data <- performance %>%
+  mutate(pass = ifelse(value >= 10, 1, 0),
+         interv = ifelse(district == 'Magude', 'Intervention', 'Control'),
+         after = ifelse(year == 2016, 'After', 'Before'),
+         interaction = ifelse(year == 2016 & district == 'Magude', 'After:Intervention', '!After:Intervention')) %>%
+  mutate(intervention = interv) %>%
+  mutate(after = factor(after, levels = c('Before', 'After')))
+
+#### BINOMIAL ANALYSIS -------------------------------------
+
+# Regression number 1
+# reg pass intervention after interaction i.school_n, cluster(intervention)
+fit1 <- lm(pass ~ after + intervention + interaction + school, data = model_data) # missing the cluster intervention stuff
+# summary(fit1)
+
+# Regression number 2
+# reg pass intervention after interaction i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit2 <- lm(pass ~ after + intervention + interaction + school + subject, data = model_data %>% filter(!is.na(subject)))
+# summary(fit2)
+
+# Regression number 3
+# reg pass intervention after interaction i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit3 <- lm(pass ~ after + intervention + interaction + school + subject + factor(trimester), data = model_data)
+# summary(fit3)
+
+# Regression number 4
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit4 <- lm(pass ~ after + intervention + interaction + school + factor(trimester), data = x)
+# summary(fit4)
+
+### CONTINUOUS VARIABLE ANALYSIS --------------------
+
+# Regression number 1
+# reg value intervention after interaction i.school_n, cluster(intervention)
+fit1b <- lm(value ~ after + intervention + interaction + school, data = model_data) # missing the cluster intervention stuff
+# summary(fit1b)
+
+# Regression number 2
+# reg value intervention after interaction i.school_n i.subject_n if subject_n!=., cluster(intervention)
+fit2b <- lm(value ~ after + intervention + interaction + school + subject, data = model_data %>% filter(!is.na(subject)))
+# summary(fit2b)
+
+# Regression number 3
+# reg value intervention after interaction i.school_n i.subject_n i.trimester if subject_n!=., cluster(intervention)
+fit3b <- lm(value ~ after + intervention + interaction + school + subject + factor(trimester), data = model_data)
+# summary(fit3b)
+
+# Regression number 4
+# identical to regression number 3 but only for math
+x <- model_data %>% filter(subject == 'Math')
+fit4b <- lm(value ~ after + intervention + interaction + school + factor(trimester), data = x)
+# summary(fit4b)
+
+# Final piece = pass examination
+time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
+                      trimester = as.character(rep(1:3, 2)),
+                      time = -3:2)
+model_data <- 
+  model_data %>%
+  left_join(time_df) %>%
+  mutate(intervention = ifelse(intervention == 'Intervention', 1, 0)) %>%
+  mutate(timeinterv = time * intervention) %>%
+  mutate(timetreat = factor(timeinterv)) %>%
+  mutate(period = factor(time)) %>%
+  mutate(timetreat = paste0(timetreat, ' Time::Intervention')) %>%
+  mutate(period = paste0(period, ' Period'))
+
+# Event study
+model_data$timetreat <- factor(model_data$timetreat,
+                               levels = c("-3 Time::Intervention",
+                                          "-2 Time::Intervention",
+                                          "-1 Time::Intervention",
+                                          "0 Time::Intervention", 
+                                          "1 Time::Intervention", 
+                                          "2 Time::Intervention"))
+fit5b <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
+# summary(fit5b)
+
+#  Eventy study - Just math
+fit6b <- lm(pass ~ intervention + period  + timetreat + school , data = model_data %>% filter(subject == 'Math'))
+# summary(fit6b)
+
+# Define function for printing table
+pretty_regression <- function(fit = fit1,
+                              remove = '!grepl("school", Term) & !grepl("subject", Term) & !grepl("trimester", Term)',
+                              label = NULL){
+  # Make tidy
+  fit_tidy <- broom::tidy(fit)
+  # rename some columns
+  names(fit_tidy) <- c('Term', 'Estimate', 'S.E.', 'Statistic', 'P')
+  fit_tidy$Statistic <- NULL
+  # Make long
+  fit_tidy <- fit_tidy %>%
+    gather(key, value, Estimate:P) %>%
+    # mutate(Term = ifelse(Term == '(Intercept)', ' Intercept', Term)) %>%
+    arrange(Term)
+  # remove stuff
+  if(!is.null(remove)){
+    fit_tidy <- fit_tidy %>%
+      filter_(remove)
+  }
+  # Recode small vals
+  fit_tidy <- 
+    fit_tidy %>%
+    mutate(value = ifelse(value < 0.001,
+                          '< 0.001',
+                          as.character(round(value, digits = 3))))
+  if(!is.null(label)){
+    names(fit_tidy)[3] <- label
+  }
+
+  # Remove the variable names
+  var_names <- gsub('+', ' ', paste0(as.character(fit$terms[[3]]), collapse = ' + '), fixed = TRUE)
+  var_names <- unlist(strsplit(var_names, ' '))
+  var_names <- var_names[nchar(var_names) > 0]
+  for (i in 1:length(var_names)){
+    fit_tidy$Term <- gsub(var_names[i], '', fit_tidy$Term)
+  }
+  return(fit_tidy)
+}
+# pretty_regression(fit1)
+
+# Define function for combining pretty regressions
+clean_names <- function(df){
+  flags <- rep(FALSE, nrow(df))
+  for (i in 2:nrow(df)){
+    flags[i] <- df$Term[i] == df$Term[i-1]
+  }
+  df$Term[flags] <- ''
+  names(df)[names(df) == 'key'] <- 'Key'
+  return(df)
+}
+x <- pretty_regression(fit1) %>% 
+  mutate(regression = 1) %>%
+  bind_rows(pretty_regression(fit2) %>%
+              mutate(regression = 2)) %>%
+  bind_rows(pretty_regression(fit3) %>%
+              mutate(regression = 3)) %>%
+    mutate(Term = factor(Term,
+                       levels = c(sort(unique(Term[Term != '(Intercept)'])), '(Intercept)'))) %>%
+  arrange(Term) %>%
+  mutate(Term = as.character(Term)) %>%
+  # mutate(value = ifelse(is.na(value), '', as.character(value))) %>%
+  spread(key = regression,
+         value = value,
+         fill = '') %>%
+  mutate(Term = as.character(Term)) %>%
+    clean_names()
+# tablify(x, n = nrow(x))
+kablify(x, size = 17) 
+
+```
+
+### Performance
+
+Here are density curves by subject.
+
+```{r}
+ggplot(data = performance,
+       aes(x = value)) +
+  facet_wrap(~subject) +
+  geom_density(n = 23,
+               alpha = 0.6,
+               fill = 'darkorange') +
+  theme_paper() +
+  labs(x = 'Grade (0-20)',
+       y = 'Density') +
+    theme(strip.background = element_rect(fill=NA),
+        strip.text = element_text(color = 'darkgreen', size = 10),
+        panel.border = element_blank())
+```
+
+### Absenteeism
+
+Below shows absenteeism for each school.
+
+Average absenteeism rate, per term, per school
+
+```{r}
+x <- 
+  ab %>%
+  group_by(year_term, school, district) %>%
+  summarise(absences = length(which(absent)),
+            presences = length(which(!absent)),
+            eligible_days = n(),
+            Students = length(unique(name))) %>%
+  mutate(absenteeism_rate = absences / eligible_days * 100) %>%
+  ungroup %>%
+  filter(!grepl('NA', year_term))
+y <- x
+names(y) <- gsub('_', ' ', names(y))
+names(y) <- Hmisc::capitalize(names(y))
+# tablify(y)
+
+library(RColorBrewer)
+cols <- colorRampPalette(brewer.pal(n = 9, name = 'Set1'))(length(unique(x$school)))
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           group = school,
+           color = school)) +
+  geom_line(alpha = 0.7,
+            size = 2) +
+  theme_paper() +
+  scale_color_manual(name = 'School',
+                     values = cols) +
+  ylim(0, 20) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x = 'Year-term',
+       y = 'Absenteeism rate')
+```
+
+Below shows absenteeism at the district level.
 
 ```{r, fig.align='center'}
 
@@ -86,12 +550,56 @@ ggplot(data = x,
            y = absenteeism_rate,
            color = district,
            group = district)) +
-  geom_line() +
-  geom_point(aes(size = eligibles),
-             alpha = 0.6) +
-  geom_vline(xintercept = 3.5, color = 'black')
+  geom_line(alpha = 0.5,
+            size = 2) +
+  geom_vline(xintercept = 3.5, color = 'black',
+             alpha = 0.3,
+             lty = 1) +
+  theme_paper() +
+  labs(x = 'Term',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by district',
+       subtitle = 'Before and after initiation of MALTEM') +
+  scale_color_manual(name = 'District',
+                     values = c('darkorange', 'blue'))
 
+```
+
+If we aggregate at the year level....
+
+
+```{r}
+x <- ab %>%
+  group_by(district, year) %>% 
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  dplyr::select(district, year, absenteeism_rate) %>%
+  mutate(absenteeism_rate = round(absenteeism_rate, digits = 2))
+# xt <- x %>% spread(key = year, value = absenteeism_rate)
+# tablify(xt)
+cols <- c('darkorange', 'darkgreen')
+ggplot(data = x %>% mutate(year = factor(year)),
+       aes(x = year,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_point() +
+  geom_line() +
+  theme_paper() +
+  scale_color_manual(name = '',
+                     values = cols) +
+  ylim(0, max(x$absenteeism_rate) * 1.05) +
+  labs(x = 'Year',
+       y = 'Absenteeism rate') +
+  geom_label_repel(aes(label = paste0(round(absenteeism_rate, 2), '%')),
+                   show.legend = FALSE)
 ```
 
 
 # Discussion
+
+The campaign was associated with a reduction in absenteeism and an improvement in grades. Bla bla bla.
+
+# References
