@@ -1836,17 +1836,7 @@ if('prepared_data.RData' %in% dir('data')){
            turma = ifelse(grepl('3 DE FEVEREIRO_2015_5_E', `Study Subject ID`), '5-A', turma)) %>%
     filter(!grepl('DUCA_2016_4_A', `Study Subject ID`))
 #   
-#   *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis- only talking about absenteeism datasets
-#   
-#   drop if school=="GRACA MACHEL"&year==2015&turma=="1-C"
-#   drop if school=="MAGUIGUANA"&year==2016&turma=="1-C"
-#   drop if school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="aug"
-#   drop if school=="GRACA MACHEL"&year==2015&turma=="2-A"
-#   drop if school=="MAGUIGUANA"&year==2015&turma=="3-A"
-#   drop if school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="aug"
-#   drop if school=="MARAGRA"&year==2015&turma=="1-D"
-  # *** classes (turmas) to be dropped because of inconsistent data entry for the whole class and specific month of analysis
-  # Laia will look at this to see if we can potentially salvage some
+
   ab <- ab %>%
     mutate(flag = 
              ifelse(school=="GRACA MACHEL"&year==2015&turma=="1-C" |
@@ -1912,13 +1902,13 @@ if('prepared_data.RData' %in% dir('data')){
     filter(!(year == 2016 &
                number == 3 &
                letter == 'A' &
-               school == '3 DE FEV')) %>%
-    mutate(letter = ifelse(letter == 'B' &
-                             number == 3 &
-                             year == 2015 &
-                             school == 'MAGUIGUANA',
-                           'A',
-                           letter))
+               school == '3 DE FEV')) #%>%
+    # mutate(letter = ifelse(letter == 'B' &
+    #                          number == 3 &
+    #                          year == 2015 &
+    #                          school == 'MAGUIGUANA',
+    #                        'A',
+    #                        letter))
   performance <-
     performance %>%
     mutate(school = ifelse(school == 'MAGUDE',
@@ -2075,6 +2065,369 @@ if('prepared_data.RData' %in% dir('data')){
     mutate(year = ifelse(grepl('DUCO_2016_4_A_', `Study Subject ID`),
                          2016, year))
   
+  # IMPLEMENT MANUAL CORRECTIONS SENT BY LAIA AUGUST 2 2017
+  # * School absenteeism - data cleaning commands, 2nd august 2017
+  # 
+  # * You might have already implemented these commands. But please, double check (important to follow this order) 
+  ab <- 
+    ab %>%
+    filter(id != 100872) %>%
+    filter(!(school=="GRACA MACHEL"&year==2015&turma=="1-C"),
+           !(school=="GRACA MACHEL"&year==2015&turma=="2-A"),
+           !(school=="MARAGRA"&year==2015&turma=="1-D"),
+           !(grepl("DUCA_2016_4_A_", `Study Subject ID`)),
+           !(grepl("3 DE FEVEREIRO_2015_5_A_", `Study Subject ID`)))
+  
+  ab <- ab %>%
+    mutate(year = ifelse(grepl("DUCO_2016_4_A_", `Study Subject ID`), 
+                         2016, 
+                         year))
+  # If the year changes, does everything else?
+  
+  # Define a function for reverse grepl (object first, string second)
+  rev_grepl <- function(a, b){
+    grepl(b, a)
+  }
+
+  ab <- ab %>%
+    mutate(turma = ifelse(rev_grepl(`Study Subject ID`, "3 DE FEVEREIRO_2015_5_E_"),
+                          '5-A',
+                          turma)) %>%
+    mutate(year = ifelse(school=="3 DE FEV"&year==2016&turma=="2-E", 2015, year))
+ 
+  ab <- ab %>%
+    filter(!(school=="MAGUIGUANA"&year==2016&turma=="1-C"),
+           !(school=="GRACA MACHEL"&year==2015&turma=="3-A"&month_name=="ago"),
+           !(school=="3 DE FEV"&year==2015&turma=="3-B"&month_name=="ago"))
+
+  # *3 DE FEV
+  ab <- ab %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="2-D"&day==28),
+           !(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="2-D"&day==29)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="2-D"&day>15&day<28,
+                        day + 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="2-E"&day==1,
+                        day + 1,
+                        day))
+  ab <- ab %>%
+    filter(!(school=="3 DE FEV"&year==2015&(month_name=="abr"|month_name=="ago"|month_name=="oct"|month_name=="nov")&turma=="3-B"&day==29),
+           !(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="3-B"&day>0&day<17))
+  ab <- ab %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="mar"&turma=="4-B"&day>4&day<31, day - 3,
+                        day))
+    
+  ab <- ab %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="4-B"&day==2),
+           !(school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="4-B"&day==3))
+
+  ab <- ab %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="abr"&turma=="4-B"&day>3&day<31,
+                        day - 3,
+                        day))
+  ab <- ab %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="4-B"&day==2),
+           !(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="4-B"&day==3)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="4-B"&day>3&day<32, 
+                        day-3,
+                        day),
+           day = ifelse(school=="3 DE FEV"&year==2015&month_name=="jun"&turma=="4-B"&day>3&day<30,
+                        day - 3,
+                        day)) %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="jul"&turma=="4-B"&day==2),
+           !(school=="3 DE FEV"&year==2015&month_name=="jul"&turma=="4-B"&day==3)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="jul"&turma=="4-B"&day>3&day<32,
+                        day - 3,
+                        day)) %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-B"&day==1),
+           !(school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-B"&day==2)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-B"&day>2&day<32, 
+                        day - 3,
+                        day)) %>%
+    filter(!(school=="3 DE FEV"&year==2015&month_name=="set"&turma=="4-B"&day==3)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="set"&turma=="4-B"&day>2&day<7,
+                         day - 2,
+                         day )) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="set"&turma=="4-B"&day>9&day<29,
+                         day - 3,
+                         day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="mai"&turma=="4-C"&day>1&day<6,
+                        day + 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2015&month_name=="ago"&turma=="4-E"&day>0&day<4,
+                        day + 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="abr"&turma=="2-A"&day>19&day<31,
+                         day - 2,
+                         day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="mai"&turma=="2-A"&day>3&day<30,
+                         day - 2,
+                         day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="jun"&turma=="2-A"&day>7&day<13,
+                        day - 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="jul"&turma=="2-A"&day>5&day<31,
+                  day - 2,
+                  day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="ago"&turma=="2-A"&day>2&day<15,
+                        day - 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="mar"&turma=="3-C"&day>26&day<29,
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="3 DE FEV"&year==2016&month_name=="mar"&turma=="5-B"&day>15&day<21,
+                        day - 2,
+                        day))
+
+  # *DUCO
+  ab <- ab %>%
+    mutate(day = ifelse(school=="DUCO"&year==2015&month_name=="abr"&turma=="2-A",
+                        day + 1, 
+                        day)) %>%
+    filter(!(school=="DUCO"&year==2015&month_name=="set"&turma=="2-A"&day==13)) %>%
+    mutate(day = ifelse(school=="DUCO"&year==2015&month_name=="mai"&turma=="3-A"&day>5&day<10,
+                        day - 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="DUCO"&year==2015&month_name=="mai"&turma=="3-A"&day>16&day<19,
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="DUCO"&year==2015&month_name=="jun"&turma=="3-A"&day>26&day<29,
+                        day - 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="DUCO"&year==2016&month_name=="abr"&turma=="5-A"&day>2&day<7,
+                        day + 1,
+                        day))
+
+  # *GRACA MACHEL
+  ab <- 
+    ab %>%
+    mutate(day = ifelse(school=="GRACA MACHEL"&year==2015&month_name=="jun"&turma=="3-A"&day>20&day<25,
+                        day + 1,
+                        day)) %>%
+    mutate(day = 
+             ifelse(school=="GRACA MACHEL"&year==2015&month_name=="abr"&turma=="3-C"&day>4&day<7,
+                    day + 1,
+                    day)) %>%
+    mutate(day = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="1-A"&day>23&day<29, 
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="jun"&turma=="1-B"&day>17&day<22,
+                        day + 2,
+                        day)) %>%
+    filter(!(school=="GRACA MACHEL"&year==2016&month_name=="abr"&turma=="2-C"&day==24)) %>%
+    mutate(day = ifelse(school=="GRACA MACHEL"&year==2016&month_name=="ago"&turma=="5-B"&day>27&day<32,
+                        day - 5,
+                        day))
+
+  # *ILHA JOSINA
+  ab <- 
+    ab %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="abr"&turma=="1-A"&day>4&day<7,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="ILHA JOSINA"&year==2015&month_name=="jul"&turma=="1-A"&(day==2|day==3))) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="jul"&turma=="1-A"&day>3&day<32,
+                        day - 3,
+                        day)) %>%
+    filter(!(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="2-A"&day==29)) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="2-A"&day>25&day<29,
+                        day + 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="2-B"&day==26,
+                        day - 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="2-B"&day>26&day<30,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="ILHA JOSINA"&year==2015&month_name=="jun"&turma=="4-C"&(day==30|day==31))) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="jun"&turma=="4-C"&day>0&day<30,
+                        day + 2,
+                        day)) %>%
+    filter(!(school=="ILHA JOSINA"&year==2015&month_name=="jul"&turma=="4-C"&(day==11|day==12))) %>%
+    filter(!(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="5-A"&day==31)) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2015&month_name=="set"&turma=="5-A"&day>12&day<31,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="ILHA JOSINA"&year==2016&month_name=="mai"&turma=="1-C"&(day==1|day==7|day==8|day==14|day==15|day==21|day==22|day==28|day==29))) %>%
+    mutate(day = ifelse(school=="ILHA JOSINA"&year==2016&month_name=="jul"&turma=="5-C"&day>23&day<29,
+                        day + 1,
+                        day)) %>%
+    filter(!(`Study Subject ID`=="ILHA JOSINA_2016_3_B_2")) %>%
+    filter(!(`Study Subject ID`=="ILHA JOSINA_2016_3_B_1"))
+
+  # *MAGUIGUANA
+  # * IMPORTANT: Joe, please, before runing the below commands, cancel the previous change that we 
+  # * told you to do about changing Maguiguana 2015 3-B to 3-A. Do this instead:
+  ab <- ab %>%
+    mutate(turma = ifelse(serial_number == 479041,
+                          '3-A',
+                          turma),
+           turma = ifelse(serial_number==479052,
+                          '3-B',
+                          turma)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&(day==8|day==9|day==10|day==11),
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="MAGUIGUANA"&year==2015&month_name=="mar"&turma=="1-C"&(day==14|day==15|day==21|day==22|day==28|day==29))) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mai"&turma=="2-B"&day>23&day<26,
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&(day==16|day==17|day==18|day==19|day==20),
+                        day - 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="set"&turma=="3-B"&(day==26|day==27),
+                        day + 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="ago"&turma=="4-B"&day==16,
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="abr"&turma=="5-B"&(day==19|day==20),
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mai"&turma=="5-B"&day==24,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="MAGUIGUANA"&year==2015&month_name=="mai"&turma=="5-C"&(day==29|day==30))) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2015&month_name=="mai"&turma=="5-C"&day>1&day<27,
+                        day + 3,
+                        day)) %>%
+    filter(!(school=="MAGUIGUANA"&year==2016&month_name=="mar"&turma=="1-B"&day==27),
+           !(school=="MAGUIGUANA"&year==2016&month_name=="mai"&turma=="1-B"&(day==28|day==29|day==31)),
+           !(school=="MAGUIGUANA"&year==2016&month_name=="ago"&turma=="1-C")) %>%
+    mutate(year = ifelse(`Study Subject ID`=="EP MAGUIGUANA_2015_3_B_9",
+                         2015,
+                         year)) %>%
+    filter(!(school=="MAGUIGUANA"&year==2016&month_name=="mai"&turma=="2-D"&(day==22))) %>%
+    mutate(day = ifelse(school=="MAGUIGUANA"&year==2016&month_name=="set"&turma=="3-B"&day>9&day<12,
+                        day + 3,
+                        day))
+
+  # *MARAGRA
+  ab <- ab %>%
+    mutate(turma = ifelse(serial_number==478804,
+                          '5-J',
+                          turma)) %>%
+    mutate(year = ifelse(serial_number==478804,
+                         2015,
+                         year)) %>%
+    filter(!(`Study Subject ID`=="MARAGRA_2015_2_D_34"),
+           !(serial_number==478210),
+           !(serial_number==478203),
+           !(`Study Subject ID`=="MARAGRA_2015_1_C_1")) %>%
+    mutate(day = ifelse(school=="MARAGRA"&year==2015&month_name=="mar"&turma=="2-B"&day==1,
+                        day + 1,
+                        day)) %>%
+    mutate(day = ifelse(school=="MARAGRA"&year==2015&month_name=="ago"&turma=="2-C"&(day==1|day==2),
+                        day + 2,
+                        day)) %>%
+    filter(!(school=="MARAGRA"&year==2015&month_name=="mar"&turma=="2-E"&day==22),
+           !(school=="MARAGRA"&year==2015&month_name=="jul"&turma=="2-F"&day==26),
+           !(school=="MARAGRA"&year==2015&month_name=="nov"&turma=="2-F"&day==8)) %>%
+    mutate(day = ifelse(school=="MARAGRA"&year==2015&month_name=="jul"&turma=="5-F"&day>4&day<9,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="MARAGRA"&year==2016&month_name=="mar"&turma=="3-D"&day==6),
+           !(school=="MARAGRA"&year==2016&month_name=="jun"&turma=="3-D"&day==26)) %>%
+    mutate(day = ifelse(school=="MARAGRA"&year==2016&month_name=="mai"&turma=="4-A"&day==15,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="MARAGRA"&year==2016&month_name=="abr"&turma=="5-A"&day==10),
+           !(school=="MARAGRA"&year==2016&month_name=="jul"&turma=="5-C"&day==24)) %>%
+    mutate(day = ifelse(school=="MARAGRA"&year==2016&month_name=="abr"&turma=="5-F"&day==24,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="MARAGRA"&year==2016&month_name=="mai"&turma=="5-F"&day==29))
+
+  ab <- ab %>%
+    mutate(day= ifelse(school=="MOINE"&year==2015&month_name=="jun"&turma=="5-A"&(day==21|day==22),
+                       day + 1,
+                       day)) %>%
+    filter(!(school=="MOINE"&year==2016&month_name=="mar"&turma=="4-A"&(day==26|day==27)))
+
+  # *SIMBE
+  ab <- ab %>%
+    filter(!(school=="SIMBE"&year==2016&month_name=="set"&turma=="1-A"&day==16)) %>%
+    mutate(day = ifelse(school=="SIMBE"&year==2016&month_name=="set"&turma=="1-A"&day==18,
+                        day - 2,
+                        day)) %>%
+    mutate(day = ifelse(school=="SIMBE"&year==2016&month_name=="mar"&turma=="2-A"&day>5&day<12,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="SIMBE"&year==2016&month_name=="mai"&turma=="5-A"&(day==7|day==8)))
+
+  # *XINAVANE
+  ab <- ab %>%
+    mutate(year = ifelse(serial_number==478684,
+                         2016,
+                         year)) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2015&month_name=="mai"&turma=="3-A"&day>15&day<19,
+                        day - 2,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2015&month_name=="jul"&turma=="3-A"&(day==4|day==5))) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2015&month_name=="jul"&turma=="3-A"&day>7&day<20,
+                        day - 2,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2015&month_name=="mar"&turma=="5-C"&(day==14|day==15))) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2015&month_name=="mar"&turma=="5-C"&day>16&day<29,
+                        day - 1,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2015&month_name=="jul"&turma=="5-C"&(day==18|day==19))) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2015&month_name=="jul"&turma=="5-C"&day>7&day<13,
+                        day - 2,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2016&month_name=="abr"&turma=="1-A")) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2016&month_name=="jun"&turma=="1-A"&day>4&day<10,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2016&month_name=="mai"&turma=="1-B"&day==22)) %>%
+    filter(!(school=="XINAVANE"&year==2016&month_name=="jul"&turma=="2-A"&day==3)) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2016&month_name=="mai"&turma=="2-B"&day>7&day<13,
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2016&month_name=="mar"&turma=="2-D"&(day==5|day==6)),
+           !(school=="XINAVANE"&year==2016&month_name=="jun"&turma=="3-A"&day==26),
+           !(school=="XINAVANE"&year==2016&month_name=="mar"&turma=="4-A"&day==6),
+           !(school=="XINAVANE"&year==2016&month_name=="mar"&turma=="4-B"&day==27)) %>%
+    mutate(day = ifelse(school=="XINAVANE"&year==2016&month_name=="ago"&turma=="4-B"&(day==28|day==29),
+                        day + 1,
+                        day)) %>%
+    filter(!(school=="XINAVANE"&year==2016&month_name=="apr"&turma=="4-C"&day==17))
+  
+  
+  # Change all date contingencies,
+  # first as a function of year, then day
+  ab$date <- as.Date(paste0(ab$year,
+                            '-',
+                            ab$month_number,
+                            '-',
+                            ab$day))
+  ab$dow <- weekdays(ab$date)
+  ab$dow <- factor(ab$dow,
+                   levels = c('Monday',
+                              'Tuesday',
+                              'Wednesday',
+                              'Thursday',
+                              'Friday',
+                              'Saturday',
+                              'Sunday'))
+  ab$month <- date_truncate(ab$date, level = 'month')
+  ab$month_name <- NULL
+  ab$month_number <- as.numeric(format(ab$date, '%m'))
+  
+  # Change all numbers/letters, as a function of turma
+  ab$number <- as.numeric(unlist(lapply(strsplit(ab$turma, '-'), function(x){x[1]})))
+  ab$letter <- unlist(lapply(strsplit(ab$turma, '-'), function(x){x[2]}))
+  
+  # Create a year_term variable
+  ab$term <-
+    ifelse(as.numeric(format(ab$month, '%m')) %in% 2:4, '1',
+           ifelse(as.numeric(format(ab$month, '%m')) %in% 5:7, '2',
+                  ifelse(as.numeric(format(ab$month, '%m')) %in% 8:10, '3',
+                         NA)))
+  ab$year_term <- paste0(ab$year,
+                         '-',
+                         ab$term)
+  
   ab$n <- NULL
   # Re-check for duplicates
    ab_dups <-
@@ -2096,6 +2449,109 @@ if('prepared_data.RData' %in% dir('data')){
    
 
    
+   # Define function for entry into status
+   entry <- function(x,
+                     force_first = FALSE){
+     # Ensure that x is boolean
+     if(!is.logical(x)){
+       stop('x must be a logical/boolean vector.')
+     }
+     # Define whether there is a change in status
+     change_vec <- abs(as.numeric(x) - as.numeric(lag(x)))
+     # Flag days which are both a change
+     # and are TRUE (ie, entry into lateness or entry into default)
+     entry_days <- which(x & change_vec == 1)
+     # Return a boolean of entry into lateness
+     return_vec <- rep(FALSE, length(x))
+     return_vec[entry_days] <- TRUE
+     # Force the first value to be copied if applicable
+     if(force_first){
+       return_vec[1] <- x[1]
+     }
+     return(return_vec)
+   }
+   
+   # Get the number of students (max) for each turma
+   # and drop those dates with very few observations
+   ab <- ab %>%
+     group_by(school, turma, month) %>%
+     mutate(max_students = length(unique(id))) %>%
+     ungroup %>%
+     group_by(school, turma, year) %>%
+     mutate(max_students_year = max(max_students, na.rm = TRUE)) %>%
+     ungroup %>%
+     filter(max_students_year >= 8) %>%
+     group_by(school, turma, date) %>%
+     mutate(n_eligibles = length(unique(id))) %>%
+     mutate(drop = n_eligibles < (0.5 * max_students_year)) %>%
+     ungroup %>%
+     filter(!drop) %>%
+     dplyr::select(-drop)
+   
+   # Drop weekends
+   ab <- ab %>%
+     filter(! dow %in% c('Saturday', 'Sunday'))
+   
+   # Identify those unlikely chains of presences
+   x <- ab %>%
+     arrange(school, turma, date) %>%
+     group_by(school, turma, date) %>%
+     summarise(presences = length(which(!absent)),
+               absences = length(which(absent))) %>%
+     ungroup %>%
+     mutate(any_absence = absences > 0,
+            any_presence = presences > 0) %>%
+     mutate(change = any_absence != dplyr::lag(any_absence, n = 1, default = FALSE)) %>%
+     group_by(school, turma) %>%
+     mutate(chain = cumsum(change) + 1) %>%
+     ungroup %>%
+     group_by(school, turma, chain) %>%
+     mutate(cs_presences = cumsum(presences)) %>%
+     mutate(cs_absences = cumsum(absences)) %>%
+     ungroup %>%
+     mutate(chain_type = ifelse(any_absence & any_presence, 
+                                'mix',
+                                ifelse(any_absence & !any_presence,
+                                       'absence',
+                                       ifelse(!any_absence & any_presence,
+                                              'presence', NA)))) %>%
+     dplyr::select(-change) %>%
+     mutate(chain_length = ifelse(chain_type == 'mix', 0,
+                                  ifelse(chain_type == 'absence',
+                                         cs_absences,
+                                         ifelse(chain_type == 'presence',
+                                                cs_presences, NA))))
+   
+   # Define thresholds
+   thresholds <-
+     data_frame(chain_type = c('mix', 'absence', 'presence'),
+                threshold = c(Inf, 15, 70))
+   
+   # Join thresholds to turma info
+   x <- 
+     left_join(x,
+               thresholds,
+               by = 'chain_type')
+   
+   # Get maximum chain length for each chain
+   x <- x %>%
+     group_by(school, turma, chain) %>%
+     mutate(maximum_chain_length = max(chain_length)) %>%
+     ungroup
+   
+   # Flag invalid chains
+   x <- x %>%
+     mutate(flag = maximum_chain_length > threshold)
+   
+   # Join back to absenteeism database
+   ab <- 
+     ab %>%
+     left_join(x %>%
+                 dplyr::select(school, turma, date, flag))
+   
+   # Remove the invalid chains
+   ab <- ab %>%
+     filter(!flag)
   
   save(ab,
        census,
@@ -2111,4 +2567,5 @@ if('prepared_data.RData' %in% dir('data')){
   write_csv(performance, 'outputs/performance.csv')
   write_csv(students, 'outputs/students.csv')
 }
+
 
