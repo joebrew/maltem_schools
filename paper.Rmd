@@ -1,26 +1,8 @@
 ---
 title: "Impact of a malaria elimination on school outcomes"
-author:
-  - name: Laia Cirera
-    email: alice@example.com
-    affiliation: Some Institute of Technology
-    corresponding: alice@example.com
-  - name: Joe Brew
-    email: bob@example.com
-    affiliation: Another University
-address:
-  - code: Some Institute of Technology
-    address: Department, Street, City, State, Zip
-  - code: Another University
-    address: Department, Street, City, State, Zip
-abstract: |
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
-  
-author_summary: |
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
-always_allow_html: yes
+date: "August 3, 2017"
+output: html_document
 bibliography: bibliography.bib
-output: rticles::plos_article
 csl: plos.csl
 ---
 
@@ -33,6 +15,8 @@ knitr::opts_chunk$set(comment = NA,
                error = TRUE, # Render report, even with errors
                cache = F)
 ```
+
+
 
 ```{r}
 library(ggthemes)
