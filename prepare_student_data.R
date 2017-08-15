@@ -1828,7 +1828,7 @@ if('prepared_data.RData' %in% dir('data')){
     students %>%
     filter(!duplicated(name))
   
-  # MANUAL CHANGES  
+  # MANUAL CHANGES  (apply them again????)
   ab <- ab %>% filter(serial_number != 100872)
   ab <- ab %>%
     filter(serial_number != 478557) %>%
