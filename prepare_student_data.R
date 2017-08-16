@@ -575,7 +575,7 @@ if('prepared_data.RData' %in% dir('data')){
   # For those that have indeed the same name and belong to different turmas, 
   # we change the name of one of them. we first create a variable"
   performance$nome_E2_C4[performance$`Study Subject ID` == 'GRACA MACHEL_2015_2_C_1'] <- 'ADERITO S COSSA 2 (duplicate name, but truly different person)' 
-  performance$nome_E2_C4[performance$`Study Subject ID` == 'MAGUIGUANA_2016_3_B_'] <- 'ANTONIO FERNANDO COSSA 2 - sounds the same, but different' 
+  performance$nome_E2_C4[performance$`Study Subject ID` == 'MAGUIGUANA_2016_3_B_5'] <- 'ANTONIO FERNANDO COSSA 2 - sounds the same, but different' 
   performance$nome_E2_C4[performance$`Study Subject ID` == 'MARAGRA_2015_2_C_11'] <- 'CARLOS ALBERTO MATUSSE (the other one, similar name)' 
 
   
@@ -655,7 +655,7 @@ if('prepared_data.RData' %in% dir('data')){
   
   
   
-  # Get year, grade, turma and number
+ # Get year, grade, turma and number
   performance <-
     performance %>%
     mutate(year = year_E2_C4,
@@ -669,7 +669,7 @@ if('prepared_data.RData' %in% dir('data')){
                              info = 'turma'))#,
            # roster_number = get_info(x = `Study Subject ID`,
            #                          info = 'number'))
-  
+ 
   # More manual cleaning as indicated by Laia
   performance <- performance %>%
     mutate(school = ifelse(school == 'MARAGRA' & 
@@ -1898,7 +1898,7 @@ if('prepared_data.RData' %in% dir('data')){
     students %>%
     filter(!duplicated(name))
   
-  # MANUAL CHANGES  
+  # MANUAL CHANGES  (apply them again????)
   ab <- ab %>% filter(serial_number != 100872)
   ab <- ab %>%
     filter(serial_number != 478557) %>%
