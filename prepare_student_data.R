@@ -1158,10 +1158,27 @@ if('prepared_data.RData' %in% dir('data')){
   # STANDARDIZING
   ########
   
+  # Clean up names
+  # Remove periods
+  ab$name <- gsub('.', '', ab$name, fixed = TRUE)
+  # Remove double spaces
+  ab$name <- gsub('  |   ', '', ab$name)
+  # Remove trailing and leading white space
+  ab$name <- trimws(ab$name)
+
+  # Remove periods
+  performance$name <- gsub('.', '', performance$name, fixed = TRUE)
+  # Remove double spaces
+  performance$name <- gsub('  |   ', '', performance$name)
+  # Remove trailing and leading white space
+  performance$name <- trimws(performance$name)
+  
+  
   # Standardize names
   df_names <- data_frame(name = sort(unique(c(performance$name,
                                               ab$name))))
-  df_names <- 
+
+    df_names <- 
     left_join(df_names,
               performance %>%
                 dplyr::select(name, school) %>%
@@ -1178,15 +1195,6 @@ if('prepared_data.RData' %in% dir('data')){
                            ab_school,
                            school)) %>%
     dplyr::select(-ab_school)
-  
-  # Remove periods
-  df_names$name <- gsub('.', '', df_names$name, fixed = TRUE)
-  
-  # Remove double spaces
-  df_names$name <- gsub('  |   ', '', df_names$name)
-  
-  # Remove trailing and leading white space
-  df_names$name <- trimws(df_names$name)
   
   # Get the number of words
   df_names$n_words <- unlist(lapply(strsplit(df_names$name, split = ' '), function(x){ length(x)}))
@@ -1243,6 +1251,16 @@ if('prepared_data.RData' %in% dir('data')){
   # Read in the refined (manually and algorithmically) names
   library(gsheet)
   df_fuzzy <- gsheet2tbl(url = 'https://docs.google.com/spreadsheets/d/1CgF122GCSkkIJWjwEyXtRZTm4p_PyXZXf_LT1Bq3k4Y/edit?usp=sharing')
+  
+  # Get number of matches in same school
+  matches <- df_fuzzy %>%
+    group_by(name, school) %>% tally
+  
+  # If no matches from same school, go back to original name
+  df_fuzzy <- 
+    left_join(df_fuzzy,
+              matches) %>%
+    mutate(new_name = ifelse(is.na(n) |n == 1, name, new_name))
 
   # if('fuzzy_names.RData' %in% dir()){
   #   load('fuzzy_names.RData')
