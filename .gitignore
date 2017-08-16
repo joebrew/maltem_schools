@@ -9,3 +9,6 @@
 /outputs
 fuzzy_names.RData
 *.html
+.httr-oauth
+midway.csv
+open_refine_names.csv

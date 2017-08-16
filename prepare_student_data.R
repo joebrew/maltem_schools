@@ -6,6 +6,8 @@ library(tidyr)
 library(tidyverse)
 library(readxl)
 library(sp)
+library(googlesheets)
+
 
 # For most recent absenteeism and performance data: 
 # Go to https://172.16.236.245:4443/OpenClinica/
@@ -1150,7 +1152,7 @@ if('prepared_data.RData' %in% dir('data')){
                        -24.9252875459,
                        -25.093706))
   
-
+  save.image('/home/joebrew/Desktop/temp.RData')
   
   ########
   # STANDARDIZING
@@ -1177,83 +1179,151 @@ if('prepared_data.RData' %in% dir('data')){
                            school)) %>%
     dplyr::select(-ab_school)
   
-  if('fuzzy_names.RData' %in% dir()){
-    load('fuzzy_names.RData')
-  } else {
-    df_fuzzy <- cism::fuzzy_match(x = df_names$name)
-    save(df_fuzzy, file = 'fuzzy_names.RData')
-  }
+  # Remove periods
+  df_names$name <- gsub('.', '', df_names$name, fixed = TRUE)
   
-  # Loop through each name, changing it if similar enough to another
-  df_names$new_name <- df_names$name
-  df_names$already_changed <- FALSE
-  df_names$master <- FALSE
-  df_names$copies <- 0
-  df_names$index <- 1:nrow(df_names)
-  threshold <- 0.1
-  n_names <- nrow(df_names)
-  for (i in 1:length(df_names$name)){
-    message(paste0(i, ' of ', n_names))
-    # Only change names for those which haven't been modified yet
-    if(!df_names$already_changed[i]){
-      this_name <- df_names$name[i]
-      this_school <- df_names$school[i]
-      # Scores
-      scores <- df_fuzzy[i,]
-      scores_df <- df_names %>%
-        mutate(score = scores)
-      
-      # Remove from scores_df the identical rows
-      scores_df <-
-        scores_df %>%
-        filter(score > 0)
-      
-      # Identify if there is anything below the threshold
-      scores_df <- scores_df %>% filter(score < threshold)
-      
-      # Keep only those matches with the same school
-      scores_df <- 
-        scores_df %>%
-        filter(school == this_school)
-      
-      # If there are names below the threshold, change them all
-      if(nrow(scores_df) > 0){
-        # Make the change to the name
-        df_names$new_name[df_names$index %in% scores_df$index] <-
-          this_name
-        # DON'T revisit this name (ie, it's already been changed)
-        df_names$already_changed[df_names$index %in% scores_df$index] <- TRUE
-        # Flag this as being the "master" name
-        df_names$master[i] <- TRUE
-        # Designate how many copies it took
-        df_names$copies[i] <- nrow(scores_df)
-      } 
-    }
-  }
+  # Remove double spaces
+  df_names$name <- gsub('  |   ', '', df_names$name)
   
-  # Use df_names to create id numbers
-  id_numbers <-
-    df_names %>%
-    group_by(name,
-             new_name,
-             school) %>%
-    tally %>%
-    ungroup %>%
-    dplyr::select(-n) %>%
-    mutate(name_match_type = ifelse(name == new_name, 'perfect',
-                                    'fuzzy')) %>%
-    mutate(perfect_dummy = ifelse(name_match_type == 'perfect', 1, 0),
-           fuzzy_dummy = ifelse(name_match_type == 'fuzzy', 1, 0)) %>%
-    mutate(perfect_dummy = cumsum(perfect_dummy),
-           fuzzy_dummy =cumsum(fuzzy_dummy)) %>%
-    mutate(fuzzy_dummy = fuzzy_dummy + 100000) %>%
-    mutate(id = ifelse(name_match_type == 'perfect', perfect_dummy,
-                       fuzzy_dummy)) %>%
-    rename(original_name = name) %>%
-    dplyr::select(original_name,
-                  school,
-                  id)
+  # Remove trailing and leading white space
+  df_names$name <- trimws(df_names$name)
+  
+  # Get the number of words
+  df_names$n_words <- unlist(lapply(strsplit(df_names$name, split = ' '), function(x){ length(x)}))
+  
+  # # Write the names to a google sheet 
+  # # Identify the sheet
+  # this_sheet <- gs_ls("school names matching - do not edit by hand")
   # 
+  # # Register the sheet
+  # this_sheet_registered <- gs_key(x = this_sheet$sheet_key)
+  # 
+  # gs_edit_cells(ss = this_sheet_registered,
+  #               ws = 1,
+  #               input = df_names,
+  #               anchor = 'A1',
+  #               col_names = TRUE,
+  #               trim = TRUE)
+  # 
+  # 
+  # # Write a csv for use with open refine
+  # write_csv(df_names %>% dplyr::select(name, school), 
+  #           'open_refine_names.csv')
+  # 
+  # # Upload data to open refine
+  # refine_upload(file = "open_refine_names.csv", 
+  #               project.name = "school names cleaning", 
+  #               open.browser = TRUE)
+  # 
+  # # Read in refine names
+  # refined <- read_csv('~/Desktop/refined.csv')
+  # names(refined)[1] <- 'new_name'
+  # refined <- refined %>%
+  #   dplyr::select(new_name)
+  # 
+  # # Join with old names
+  # df_names <-
+  #   cbind(df_names, refined)
+  # 
+  # df_names <- df_names %>%
+  #   dplyr::select(school, name, new_name)
+  # 
+  # # Get numbers
+  # df_names <- 
+  #   df_names %>%
+  #   mutate(number = as.numeric(factor(new_name)))
+  # 
+  # # Write a csv for further manual cleaning
+  # write_csv(df_names, '~/Desktop/midway.csv')
+  # 
+  # # After refining, read back in data
+  # df_fuzzy <- refine_export(project.name = "school names cleaning")
+  # 
+  
+  # Read in the refined (manually and algorithmically) names
+  library(gsheet)
+  df_fuzzy <- gsheet2tbl(url = 'https://docs.google.com/spreadsheets/d/1CgF122GCSkkIJWjwEyXtRZTm4p_PyXZXf_LT1Bq3k4Y/edit?usp=sharing')
+
+  # if('fuzzy_names.RData' %in% dir()){
+  #   load('fuzzy_names.RData')
+  # } else {
+  #   df_fuzzy <- cism::fuzzy_match(x = df_names$name)
+  #   save(df_fuzzy, file = 'fuzzy_names.RData')
+  # }
+  # 
+  # # Loop through each name, changing it if similar enough to another
+  # df_names$new_name <- df_names$name
+  # df_names$already_changed <- FALSE
+  # df_names$master <- FALSE
+  # df_names$copies <- 0
+  # df_names$index <- 1:nrow(df_names)
+  # threshold <- 0.1
+  # n_names <- nrow(df_names)
+  # for (i in 1:length(df_names$name)){
+  #   message(paste0(i, ' of ', n_names))
+  #   # Only change names for those which haven't been modified yet
+  #   if(!df_names$already_changed[i]){
+  #     this_name <- df_names$name[i]
+  #     this_school <- df_names$school[i]
+  #     # Scores
+  #     scores <- df_fuzzy[i,]
+  #     scores_df <- df_names %>%
+  #       mutate(score = scores)
+  #     
+  #     # Remove from scores_df the identical rows
+  #     scores_df <-
+  #       scores_df %>%
+  #       filter(score > 0)
+  #     
+  #     # Identify if there is anything below the threshold
+  #     scores_df <- scores_df %>% filter(score < threshold)
+  #     
+  #     # Keep only those matches with the same school
+  #     scores_df <- 
+  #       scores_df %>%
+  #       filter(school == this_school)
+  #     
+  #     # If there are names below the threshold, change them all
+  #     if(nrow(scores_df) > 0){
+  #       # Make the change to the name
+  #       df_names$new_name[df_names$index %in% scores_df$index] <-
+  #         this_name
+  #       # DON'T revisit this name (ie, it's already been changed)
+  #       df_names$already_changed[df_names$index %in% scores_df$index] <- TRUE
+  #       # Flag this as being the "master" name
+  #       df_names$master[i] <- TRUE
+  #       # Designate how many copies it took
+  #       df_names$copies[i] <- nrow(scores_df)
+  #     } 
+  #   }
+  # }
+  # 
+  # # Use df_names to create id numbers
+  # id_numbers <-
+  #   df_names %>%
+  #   group_by(name,
+  #            new_name,
+  #            school) %>%
+  #   tally %>%
+  #   ungroup %>%
+  #   dplyr::select(-n) %>%
+  #   mutate(name_match_type = ifelse(name == new_name, 'perfect',
+  #                                   'fuzzy')) %>%
+  #   mutate(perfect_dummy = ifelse(name_match_type == 'perfect', 1, 0),
+  #          fuzzy_dummy = ifelse(name_match_type == 'fuzzy', 1, 0)) %>%
+  #   mutate(perfect_dummy = cumsum(perfect_dummy),
+  #          fuzzy_dummy =cumsum(fuzzy_dummy)) %>%
+  #   mutate(fuzzy_dummy = fuzzy_dummy + 100000) %>%
+  #   mutate(id = ifelse(name_match_type == 'perfect', perfect_dummy,
+  #                      fuzzy_dummy)) %>%
+  #   rename(original_name = name) %>%
+  #   dplyr::select(original_name,
+  #                 school,
+  #                 id)
+  # 
+  
+  df_names <- df_fuzzy
+  
   # Fix the names in performance and ab to be standardized
   ab <- 
     ab %>%
