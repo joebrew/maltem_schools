@@ -1190,7 +1190,7 @@ if('prepared_data.RData' %in% dir('data')){
                 rename(ab_school = school) %>%
                 filter(!duplicated(name)),
               by = 'name') %>%
-    mutate(name_source = ifelse(is.na(school), 'ab', 'school')) %>%
+    mutate(name_source = ifelse(is.na(school), 'ab', 'performance')) %>%
     mutate(school = ifelse(is.na(school),
                            ab_school,
                            school)) %>%
@@ -1251,6 +1251,46 @@ if('prepared_data.RData' %in% dir('data')){
   # Read in the refined (manually and algorithmically) names
   library(gsheet)
   df_fuzzy <- gsheet2tbl(url = 'https://docs.google.com/spreadsheets/d/1CgF122GCSkkIJWjwEyXtRZTm4p_PyXZXf_LT1Bq3k4Y/edit?usp=sharing')
+  
+  # Get where that name appears
+  df_fuzzy[,c("school_ab_2015", "school_ab_2016",
+              "school_pe_2015", "school_pe_2016",
+              "turma_ab_2015", "turma_ab_2016",
+              "turma_pe_2015", "turma_pe_2016")] <- ''
+  for (i in 1:nrow(df_fuzzy)){
+    message(i)
+    this_name <- df_fuzzy$name[i]
+    in_ab <- this_name %in% unique(ab$original_name)
+    in_pe <- this_name %in% unique(performance$original_name)
+    if(in_ab){
+      x  <- 
+        ab %>%
+        filter(original_name == this_name,
+               year == 2015)
+      df_fuzzy$school_ab_2015[i] <- paste0(unique(x$school), collapse = ', ')
+      df_fuzzy$turma_ab_2015[i] <- paste0(unique(x$turma), collapse = ', ')
+      x  <- 
+        ab %>%
+        filter(original_name == this_name,
+               year == 2016)
+      df_fuzzy$school_ab_2016[i] <- paste0(unique(x$school), collapse = ', ')
+      df_fuzzy$turma_ab_2016[i] <- paste0(unique(x$turma), collapse = ', ')
+    }
+    if(in_pe){
+      x  <- 
+        performance %>%
+        filter(original_name == this_name,
+               year == 2015)
+      df_fuzzy$school_pe_2015[i] <- paste0(unique(x$school), collapse = ', ')
+      df_fuzzy$turma_pe_2015[i] <- paste0(unique(x$turma), collapse = ', ')
+      x  <- 
+        performance %>%
+        filter(original_name == this_name,
+               year == 2016)
+      df_fuzzy$school_pe_2016[i] <- paste0(unique(x$school), collapse = ', ')
+      df_fuzzy$turma_pe_2016[i] <- paste0(unique(x$turma), collapse = ', ')
+    }
+  }
   
   # Get number of matches in same school
   matches <- df_fuzzy %>%
