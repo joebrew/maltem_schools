@@ -1159,6 +1159,7 @@ if('prepared_data.RData' %in% dir('data')){
   ########
   
   # Clean up names
+  
   # Remove periods
   ab$name <- gsub('.', '', ab$name, fixed = TRUE)
   # Remove double spaces
@@ -1199,6 +1200,7 @@ if('prepared_data.RData' %in% dir('data')){
   # Get the number of words
   df_names$n_words <- unlist(lapply(strsplit(df_names$name, split = ' '), function(x){ length(x)}))
   
+  # DO NOT UNCOMMENT THESE LINES
   # # Write the names to a google sheet 
   # # Identify the sheet
   # this_sheet <- gs_ls("school names matching - do not edit by hand")
@@ -1252,6 +1254,11 @@ if('prepared_data.RData' %in% dir('data')){
   library(gsheet)
   df_fuzzy <- gsheet2tbl(url = 'https://docs.google.com/spreadsheets/d/1CgF122GCSkkIJWjwEyXtRZTm4p_PyXZXf_LT1Bq3k4Y/edit?usp=sharing')
   
+  df_fuzzy <-
+    df_fuzzy %>%
+    group_by(school, name) %>%
+    summarise(new_name = dplyr::first(new_name))
+  
   # # Get where that name appears
   # df_fuzzy[,c("school_ab_2015", "school_ab_2016",
   #             "school_pe_2015", "school_pe_2016",
@@ -1300,7 +1307,8 @@ if('prepared_data.RData' %in% dir('data')){
   df_fuzzy <- 
     left_join(df_fuzzy,
               matches) %>%
-    mutate(new_name = ifelse(is.na(n) |n == 1, name, new_name))
+    mutate(new_name = ifelse(is.na(n) |n != 1, name, new_name))
+  df_fuzzy$n <- NULL
 
   # if('fuzzy_names.RData' %in% dir()){
   #   load('fuzzy_names.RData')
@@ -1381,14 +1389,16 @@ if('prepared_data.RData' %in% dir('data')){
   # 
   
   df_names <- df_fuzzy
+  df_names <- df_names %>% ungroup
   
   # Fix the names in performance and ab to be standardized
   ab <- 
     ab %>%
     left_join(df_names %>%
                 dplyr::select(name, 
+                              school,
                               new_name),
-              by = 'name') %>%
+              by = c('school', 'name')) %>%
     mutate(original_name = name) %>%
     mutate(name = new_name) %>%
     dplyr::select(-new_name)
@@ -1396,13 +1406,26 @@ if('prepared_data.RData' %in% dir('data')){
   performance <- 
     performance %>%
     left_join(df_names %>%
-                dplyr::select(name, 
+                dplyr::select(name,
+                              school,
                               new_name),
-              by = 'name') %>%
+              by = c('name', 'school')) %>%
     mutate(original_name = name) %>%
     mutate(name = new_name) %>%
     dplyr::select(-new_name)
   
+  #####
+  # Second stage of fuzzy matching - with the census 
+  #####
+  # We already have identified the within-schools data matching
+  # In performance, it brought down the number of names from
+  # length(unique(performance$original_name))
+  # to
+  # length(unique(ab$name))
+  # In ab, it brought down the number of names from
+  # length(unique(ab$original_name))
+  # to
+  # length(unique(ab$name))
   # Identify the closest match in the census
   
   # Get a new dataframe of names
@@ -1428,6 +1451,8 @@ if('prepared_data.RData' %in% dir('data')){
   # Get a match with the census
   census$name <- gsub("[^[:alnum:]///' ]", "", census$name)
   census_names <- sort(unique(census$name))
+  
+  
   fuzzy_census <- cism::fuzzy_match(x = df_names$name,
                                     y = census_names)
   
@@ -1508,8 +1533,8 @@ if('prepared_data.RData' %in% dir('data')){
                          ifelse(df_names$confidence_score < 0.2 &
                                   (is.na(df_names$km) | df_names$km < 10), TRUE, FALSE))))
   
-  # Matched about half
-  
+  # Matched about 71%
+  table(df_names$okay)
   # Remove those which don't meet our rules
   df_names <-
     df_names %>%
@@ -1610,15 +1635,16 @@ if('prepared_data.RData' %in% dir('data')){
   ab$school <- ab$school.x; ab$school.x <- ab$school.y <- NULL
   
   # Remove those rows of census with no students
-  census <- 
-    census %>%
-    left_join(students %>%
-                filter(in_census) %>%
-                dplyr::select(census_name) %>%
-                mutate(keep = TRUE) %>%
-                filter(!duplicated(census_name)),
-              by = 'census_name') %>%
-    filter(!is.na(keep))
+  # Not doing for now, since we want to use some household info later
+  # census <- 
+  #   census %>%
+  #   left_join(students %>%
+  #               filter(in_census) %>%
+  #               dplyr::select(census_name) %>%
+  #               mutate(keep = TRUE) %>%
+  #               filter(!duplicated(census_name)),
+  #             by = 'census_name') %>%
+  #   filter(!is.na(keep))
   
   # Get kilometers to school in students
   # and remove from other places
@@ -1671,7 +1697,7 @@ if('prepared_data.RData' %in% dir('data')){
     })
   }
   
-  # Convert to km
+    # Convert to km
   students <- 
     students %>%
     mutate(km_to_school = distance_to_school / 1000) %>%
@@ -1773,7 +1799,7 @@ if('prepared_data.RData' %in% dir('data')){
     })
   }
   
-  # Combine students and census (and just get rid of census)
+  # Combine students and census and get rid of the old census
   students <- 
     left_join(students,
               census %>%
