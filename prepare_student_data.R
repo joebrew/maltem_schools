@@ -2722,4 +2722,7 @@ if('prepared_data.RData' %in% dir('data')){
   write_csv(students, 'outputs/students.csv')
 }
 
+# No need to run unless for specific sub-analysis
+# (should not run often since it calls google's api)
+# source('names_matching_table.R')
 
