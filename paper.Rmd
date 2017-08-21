@@ -1,9 +1,17 @@
 ---
 title: "Impact of a malaria elimination on school outcomes"
-date: "August 3, 2017"
-output: html_document
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 bibliography: bibliography.bib
-csl: plos.csl
+csl: elsevier-harvard.csl
+output:
+  html_document:
+    pandoc_args: [
+      "+RTS", "-K16000m",
+      "-RTS"
+    ]
+    toc: true
+    toc_float: true
+    theme: flatly
 ---
 
 ```{r setup, include=FALSE}
@@ -23,6 +31,7 @@ library(ggthemes)
 library(ggrepel)
 library(kableExtra)
 library(knitr)
+library(scales)
 
 # Get school data
 source("prepare_student_data.R")
@@ -37,14 +46,73 @@ source('helpers.R')
 
 # Define a theme for the visuals
 theme_paper <- function(){ggthemes::theme_tufte()}
+
+# Borrowed from https://rpubs.com/Koundy/71792
+theme_publication <- function(base_size=14, base_family="Arial") {
+  library(grid)
+  library(ggthemes)
+  (theme_foundation(base_size=base_size, base_family=base_family)
+    + theme(plot.title = element_text(face = "bold",
+                                      size = rel(1.2), hjust = 0.5),
+            text = element_text(),
+            panel.background = element_rect(colour = NA),
+            plot.background = element_rect(colour = NA),
+            panel.border = element_rect(colour = NA),
+            axis.title = element_text(face = "bold",size = rel(1)),
+            axis.title.y = element_text(angle=90,vjust =2),
+            axis.title.x = element_text(vjust = -0.2),
+            axis.text = element_text(), 
+            axis.line = element_line(colour="black"),
+            axis.ticks = element_line(),
+            panel.grid.major = element_line(colour="#f0f0f0"),
+            panel.grid.minor = element_blank(),
+            legend.key = element_rect(colour = NA),
+            legend.position = "bottom",
+            legend.direction = "horizontal",
+            legend.key.size= unit(0.5, "cm"),
+            legend.margin = unit(0, "cm"),
+            legend.title = element_text(face="italic"),
+            plot.margin=unit(c(10,5,5,5),"mm"),
+            strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+            strip.text = element_text(face="bold")
+    ))
+}
+
+colors <- colorRampPalette(c('darkorange', 'darkgreen', RColorBrewer::brewer.pal(9, 'Spectral')))(3)
+
+scale_fill_publication <- function(...){
+  library(scales)
+  discrete_scale("fill",
+                 "Publication",
+                 manual_pal(values = colors
+                              # c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")
+                            ), ...)
+  
+}
+
+scale_colour_publication <- function(...){
+  library(scales)
+  discrete_scale("colour",
+                 "Publication",
+                 manual_pal(values = colors
+                            # c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")
+                            ), ...)
+  
+}
 ```
 
 
 # Introduction
 
 
+Malaria poses a double threat to children. First, they are vulnerable to the physiological effects of the illness, including death (as many as 50% of deaths among school-aged children in areas of Africa can be attributed to malaria [@Murray2012]). Second, the social and economic impact of malaria infection in children has a more reverberating effect than among adults: a missed day of work affects short-term wages; a missed day of school affects long-term human capital accumulation [@Bleakley2010], and shocks in health to young people have been shown to have drastic effects later in life [@Smith2009-zu, @Case2011-bo, @Currie2008-cm].
+
+Though children are recognized as a group of importance in terms of malaria and its effects, little is known about the educational impact of malaria control and elimination programs. Studies which do exist suggest that the reduction of malaria is associated with an improvement in cognitive ability,  and a reduction in absenteeism [@Lucas2010-ea, @Sachs2002-qk]. However, these studies generally rely on secondary information, using natural variation in malarial incidence, rather than shocks or interventions. Those studies which do examine the effect of interventions are generally either (a) relatively small in sample, or (b) very historical (with a focus on the WHO's 1950s and 1960s GMEP). (Need more references here) Given the current global push towards malaria eradication [@Alonso2011], quantifying the extent to which programmes aimed at malaria elimination improve educational outcomes (absenteeism and performance) relative to traditional “control” strategies is essential.
+
 
 ## Context
+
+This study’s objective was to measure the educational impact of a malaria elimination campaign in Southern Mozambique. This campaign, which saw the massive administration of 4 rounds of dihydroartemisinin-piperaquine along with accompanying indoor residual spraying and reactive epidemiological surveillance activities, has been described in detail elsewhere [@placeholder2017]. Figure 1 shows the intervention (Magude) and control (Manhiça) districts, along with the location of residences (red) and schools (black).
 
 ```{r}
 cols <- c('darkorange', 'darkgreen')
@@ -69,7 +137,7 @@ g <- ggplot() +
         axis.ticks = element_blank(), axis.title = element_blank(),
         legend.position = 'none') +
   theme_map() +
-  theme_paper() 
+  theme_publication() 
 # print(g) +
 #     geom_point(data = geo,
 #              aes(x = lng,
@@ -77,10 +145,7 @@ g <- ggplot() +
 #              color = 'black',
 #              alpha = 0.7,
 #              size = 3)
-```
 
-
-```{r}
 g +
   geom_point(data = census,
              aes(x = longitude,
@@ -94,49 +159,51 @@ g +
              color = 'black',
              alpha = 0.7,
              size = 3) +
-  labs(title = 'Intervention and control areas',
+  labs(title = 'Fig 1: Intervention and control areas',
        x = '', y = '')
 ```
+
+Using person-level data from `r comma(nrow(students))` students from `r length(unique(students$school))` schools (5 in an area of malaria “control”, and 5 in an area of malaria “elimination”), we estimate the elimination campaign’s effect on student absenteeism and achievement. Our results suggest that even in the short-term and without having achieved elimination, the reduction in the burden of malaria associated with the campaign brought significant improvements in educational outcomes. 
 
 
 ## Literature
 
-This is the first reference we do have [@Grant2013]
+A literature section should go here. It should use bibtex formatted entries in `bibliography.bib`. References to citations should written using the citation's "key", in the following format: 
+
+```{r, results = 'asis', eval = FALSE, echo = TRUE}
+cat(paste0("[@Grant2013]"))
+```
+
+For example, evidence from rural Malawi suggests that menstruation plays a significant role in absenteeism [@Grant2013].
 
 ## Ethics
+
+The protocol for this study was approved by the scientific and ethics committees of the Centro de Investigação em Saude de Manhiça. 
 
 # Methods
 
 ## Data collection 
 
+We gathered student-level information on absenteeism and grades from 8 different schools in the districts of Manhiça and Magude for the period from 2015 to 2016. During each school visit, all of the paper records for absenteeism and examination grades were photographed; after the visits, data entry clerks transcribed the photographs into a database using the OpenClinica software. 
+
 ## Data cleaning
 
-We used Monte Carlo simulations to determine the likelihood of uninterrupted "chains" of presences and absences, and removed those which exceeded a likelihood of 0.1%.
+Data were inconsistently coded, particularly in terms of spelling. This was a function of (a) data entry error on the part of the schools which maintain the records, (b) data entry error on the part of the clerks hired for this project, and (c) variation in how names are used in Mozambique (middle name vs. mother's last name, vs father's last name, etc.). To address these inconsistencies, we used three different approaches to identifying "matches" (ie, differently coded data elements which were actually from the same source): (i) fuzzy-matching using approximate string distance, (ii) the "OpenRefine" software, and (iii) manual checks and modifications.
 
-```{r}
-plot(sims$consec, sims$p)
-```
+A secondary issue we faced in the data cleaning process was the falsification of data on the part of the teachers who maintained absenteeism records. In some cases, an entire class of 30 students was marked as "present" for months consecutively, something which was almost certainly not the case. In order to identify and remove from our sample consecutive chains of absences and presences which we determined to be unbelievable, we estimated the probability of each chain's occurrence given a prior, independent day-specific absenteeism rate of 8%, and removed those chains of presences and absences with probabilities below 0.0001 and 0.00001, respectively (we'll need to change these figures later).
+
 
 ## Analysis
 
-### Difference in differences
-
-In diff-diff models: assumption: parallel trends (in the outcome variable) in treatment and
-control groups before the introduction of the intervention
+We employ a two step analysis for the estimation of the effect of the intervention on student absenteeism and performance. First, we construct an ordinary least squares regression model, controlling for potential confounders and interacting binary varibles for time and place to parse the adjusted effect of the intervention on both performance and absenteeism at the global level (ie, aggregate rates before and after). Second, we construct an "event study model" at the trimester level to detect the shock from the intervention itself, and to estimate the differential nature and signifiance of absenteeism and performance trends in both regions. 
 
 
-### Event study model
-
-The coefficients for the interaction between trimester and intervention area identify the differential trends in the outcome variable over
-time between the treated and control regions. Thus, as the policy is implemented in
-2016, these coefficients identify any differential pre-trends in the outcome variable
-between treated and control regions (the crucial assumption for diff-diff models).
 
 # Results
 
-## Descriptive
+We observed a total of `r comma(length(ab$date[ab$district == 'Magude']))` unique student-days from Magude (intervention area) and `r comma(length(ab$date[ab$district == 'Manhiça']))` from Manhiça (control area). We also collected the standardized test scores for `r comma(length(performance$name[performance$district == 'Magude']))` and  `r comma(length(performance$name[performance$district == 'Manhiça']))` unique trimester-student-subjects, respectively for the two districts.
 
-The districts are similar.
+Though are sample was significantly smaller in Magude, the two groups are fairly similar in terms of demographics (see below table).
 
 
 ```{r}
@@ -179,7 +246,8 @@ y <- y %>% filter(!grepl('Conditions', Characteristic),
 kablify(y, size = 14)
 ```
 
-Bla bla bla.
+
+
 
 
 ```{r}
@@ -202,8 +270,19 @@ x <- left_join(x,y)
 x <- gather(x, key, value, `Average grade`: `Absenteeism rate`)
 xt <- x %>% spread(key = key, value = value)
 names(xt) <- Hmisc::capitalize(names(xt))
-tablify(xt)
+low <- min(xt$`Absenteeism rate`)
+high <- max(xt$`Absenteeism rate`)
+lg <- min(xt$`Average grade`)
+hg <- max(xt$`Average grade`)
 ```
+
+The average annual absenteeism rates in the two districts ranged from `r low` to `r high`. The average grade, which is on a 0-20 scale, ranged from `r lg` to `r hg` (see below table).
+
+```{r}
+kablify(xt, size = 14)
+```
+
+The distribution of marks by study subject is notably different. However, with the exception of English, the distributions are largely similar (confirmed by Kolmogorov–Smirnov tests).
 
 ```{r}
 ggplot(data = performance,
@@ -213,7 +292,7 @@ ggplot(data = performance,
   facet_wrap(~subject) +
   geom_density(n = 23,
                alpha = 0.4) +
-  theme_paper() +
+  theme_publication() +
   labs(x = 'Grade (0-20)',
        y = 'Density') +
     theme(strip.background = element_rect(fill=NA),
@@ -223,7 +302,7 @@ ggplot(data = performance,
                     values = c('darkorange', 'darkgreen'))
 ```
 
-Percentage passing, bla bla bla.
+The below chart shows the percentage of student-trimester-subject matches which received a "passing" (> 10) mark by year and district. Note the much steeper improvement in Magude, relative to Manhiça.
 
 
 ```{r}
@@ -240,8 +319,8 @@ ggplot(data = x %>% mutate(year = factor(year)),
            color = district,
            group = district)) +
     geom_point(size = 5) +
-  geom_line(lty = 3, alpha = 0.5) +
-  theme_paper() +
+  geom_line(lty = 3) +
+  theme_publication() +
   scale_color_manual(name = '',
                      values = cols) +
   geom_vline(xintercept = 3.5,
@@ -255,7 +334,7 @@ ggplot(data = x %>% mutate(year = factor(year)),
   #                  show.legend = FALSE)
 ```
 
-Mean grade obtained, all subjects
+The below chart shows the average mark by year and district. Again, though both districts saw improvements, note the much more pronounced improvement in Magude relative to Manhiça.
 
 ```{r}
 x <- performance %>%
@@ -269,10 +348,10 @@ ggplot(data = x %>% mutate(year = factor(year)),
            y = val,
            color = district,
            group = district)) +
-  geom_point(size = 4, alpha = 0.7) +
+  geom_point(size = 4, alpha = 0.9) +
   geom_line(lty = 2,
-            alpha = 0.4) +
-  theme_paper() +
+            alpha = 0.8) +
+  theme_publication() +
   scale_color_manual(name = '',
                      values = cols) +
   # ylim(0, max(x$val) * 1.05) +
@@ -280,8 +359,8 @@ ggplot(data = x %>% mutate(year = factor(year)),
        y = 'Average grade') +
   geom_label_repel(aes(label = paste0(round(val, 2))),
                    show.legend = FALSE,
-                   alpha = 0.5,
-                   size = 2) +
+                   alpha = 0.8,
+                   size = 3) +
   geom_vline(xintercept = 3.5,
              color = 'darkred',
              alpha = 0.6,
@@ -294,7 +373,118 @@ ggplot(data = x %>% mutate(year = factor(year)),
              size = 1)
 ```
 
-## Analytical
+
+
+
+
+The below chart shows the average absenteeism rate, per trimester, for each school.
+
+```{r}
+x <- 
+  ab %>%
+  group_by(year_term, school, district) %>%
+  summarise(absences = length(which(absent)),
+            presences = length(which(!absent)),
+            eligible_days = n(),
+            Students = length(unique(name))) %>%
+  mutate(absenteeism_rate = absences / eligible_days * 100) %>%
+  ungroup %>%
+  filter(!grepl('NA', year_term))
+y <- x
+names(y) <- gsub('_', ' ', names(y))
+names(y) <- Hmisc::capitalize(names(y))
+# kablify(y)
+
+library(RColorBrewer)
+cols <- colorRampPalette(brewer.pal(n = 9, name = 'Set1'))(length(unique(x$school)))
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           group = school,
+           color = school)) +
+  geom_line(alpha = 0.7,
+            size = 2) +
+  theme_publication() +
+  scale_color_manual(name = 'School',
+                     values = cols) +
+  ylim(0, 20) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x = 'Year-term',
+       y = 'Absenteeism rate')
+```
+
+Below shows absenteeism at the district level.
+
+```{r, fig.align='center'}
+
+# Absenteeism by month by district
+x <- 
+  ab %>%
+  group_by(district, year_term) %>%
+  summarise(presences = length(which(!absent)),
+            absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  filter(!grepl('NA', year_term))
+  
+ggplot(data = x,
+       aes(x = year_term,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_line(alpha = 0.5,
+            size = 2) +
+  geom_vline(xintercept = 3.5, color = 'black',
+             alpha = 0.3,
+             lty = 1) +
+  theme_publication() +
+  labs(x = 'Term',
+       y = 'Absenteeism rate',
+       title = 'Absenteeism rate by district',
+       subtitle = 'Before and after initiation of MALTEM') +
+  scale_color_manual(name = 'District',
+                     values = c('darkorange', 'blue'))
+
+```
+
+If we aggregate at the year level....
+
+
+```{r}
+x <- ab %>%
+  group_by(district, year) %>% 
+  summarise(absences = length(which(absent)),
+            eligibles = n()) %>%
+  ungroup %>%
+  mutate(absenteeism_rate = absences / eligibles * 100) %>%
+  dplyr::select(district, year, absenteeism_rate) %>%
+  mutate(absenteeism_rate = round(absenteeism_rate, digits = 2))
+# xt <- x %>% spread(key = year, value = absenteeism_rate)
+# kablify(xt)
+cols <- c('darkorange', 'darkgreen')
+ggplot(data = x %>% mutate(year = factor(year)),
+       aes(x = year,
+           y = absenteeism_rate,
+           color = district,
+           group = district)) +
+  geom_point() +
+  geom_line() +
+  theme_publication() +
+  scale_color_manual(name = '',
+                     values = cols) +
+  ylim(0, max(x$absenteeism_rate) * 1.05) +
+  labs(x = 'Year',
+       y = 'Absenteeism rate') +
+  geom_label_repel(aes(label = paste0(round(absenteeism_rate, 2), '%')),
+                   show.legend = FALSE)
+```
+
+
+
+## Difference in differences
+
+The below table shows the regression details for three different models, all using the binary outcome of passed vs. did-not-pass, and right hand side variables representing binary time (before vs. after), binary location (interventin vs. control), and the fixed effect of the school. Models 2 and 3 also include the school subject, and model 3 includes fixed effects for trimester.
 
 
 ```{r}
@@ -450,139 +640,283 @@ x <- pretty_regression(fit1) %>%
          fill = '') %>%
   mutate(Term = as.character(Term)) %>%
     clean_names()
-# tablify(x, n = nrow(x))
-kablify(x, size = 17) 
+# kablify(x, n = nrow(x))
+kablify(x, size = 14) 
 
 ```
 
-### Performance
 
-Here are density curves by subject.
+The below is a reproduction of the above, but only for mathematics (excluding all other subject tests).
 
 ```{r}
-ggplot(data = performance,
-       aes(x = value)) +
-  facet_wrap(~subject) +
-  geom_density(n = 23,
-               alpha = 0.6,
-               fill = 'darkorange') +
-  theme_paper() +
-  labs(x = 'Grade (0-20)',
-       y = 'Density') +
-    theme(strip.background = element_rect(fill=NA),
-        strip.text = element_text(color = 'darkgreen', size = 10),
-        panel.border = element_blank())
+kablify(clean_names(pretty_regression(fit4,
+                               remove = '!grepl("school", Term)')),
+        size = 14)
 ```
 
-### Absenteeism
 
-Below shows absenteeism for each school.
-
-Average absenteeism rate, per term, per school
+We can also regress the _average grade_ (rather than the binary pass/fail), as shown in the below.
 
 ```{r}
-x <- 
-  ab %>%
-  group_by(year_term, school, district) %>%
-  summarise(absences = length(which(absent)),
-            presences = length(which(!absent)),
-            eligible_days = n(),
-            Students = length(unique(name))) %>%
-  mutate(absenteeism_rate = absences / eligible_days * 100) %>%
-  ungroup %>%
-  filter(!grepl('NA', year_term))
-y <- x
-names(y) <- gsub('_', ' ', names(y))
-names(y) <- Hmisc::capitalize(names(y))
-# tablify(y)
+x <- pretty_regression(fit1b) %>% 
+  mutate(regression = 1) %>%
+  bind_rows(pretty_regression(fit2b) %>%
+              mutate(regression = 2)) %>%
+  bind_rows(pretty_regression(fit3b) %>%
+              mutate(regression = 3)) %>%
+    mutate(Term = factor(Term,
+                       levels = c(sort(unique(Term[Term != '(Intercept)'])), '(Intercept)'))) %>%
+  arrange(Term) %>%
+  mutate(Term = as.character(Term)) %>%
+  # mutate(value = ifelse(is.na(value), '', as.character(value))) %>%
+  spread(key = regression,
+         value = value,
+         fill = '') %>%
+  mutate(Term = as.character(Term)) %>%
+    clean_names()
+# kablify(x, n = nrow(x))
+kablify(x, size = 14) #%>%
+  # add_header_above(c(" " = 2, "Regression versions" = 3))
+    # kable_styling(bootstrap_options = c("striped", 
+                                        # "hover")) #%>% 
+                                        # "condensed", 
+                                        # "responsive")) %>%
+  # add_header_above(c(" " = 2, "Regression versions" = 3))
 
-library(RColorBrewer)
-cols <- colorRampPalette(brewer.pal(n = 9, name = 'Set1'))(length(unique(x$school)))
-ggplot(data = x,
-       aes(x = year_term,
-           y = absenteeism_rate,
-           group = school,
-           color = school)) +
-  geom_line(alpha = 0.7,
-            size = 2) +
-  theme_paper() +
-  scale_color_manual(name = 'School',
-                     values = cols) +
-  ylim(0, 20) +
-  theme(axis.text.x = element_text(angle = 90)) +
-  labs(x = 'Year-term',
-       y = 'Absenteeism rate')
-```
-
-Below shows absenteeism at the district level.
-
-```{r, fig.align='center'}
-
-# Absenteeism by month by district
-x <- 
-  ab %>%
-  group_by(district, year_term) %>%
-  summarise(presences = length(which(!absent)),
-            absences = length(which(absent)),
-            eligibles = n()) %>%
-  ungroup %>%
-  mutate(absenteeism_rate = absences / eligibles * 100) %>%
-  filter(!grepl('NA', year_term))
-  
-ggplot(data = x,
-       aes(x = year_term,
-           y = absenteeism_rate,
-           color = district,
-           group = district)) +
-  geom_line(alpha = 0.5,
-            size = 2) +
-  geom_vline(xintercept = 3.5, color = 'black',
-             alpha = 0.3,
-             lty = 1) +
-  theme_paper() +
-  labs(x = 'Term',
-       y = 'Absenteeism rate',
-       title = 'Absenteeism rate by district',
-       subtitle = 'Before and after initiation of MALTEM') +
-  scale_color_manual(name = 'District',
-                     values = c('darkorange', 'blue'))
 
 ```
 
-If we aggregate at the year level....
+Again, we reproduce the above for mathematics only (average, continuous grade)
 
 
 ```{r}
-x <- ab %>%
-  group_by(district, year) %>% 
-  summarise(absences = length(which(absent)),
-            eligibles = n()) %>%
-  ungroup %>%
-  mutate(absenteeism_rate = absences / eligibles * 100) %>%
-  dplyr::select(district, year, absenteeism_rate) %>%
-  mutate(absenteeism_rate = round(absenteeism_rate, digits = 2))
-# xt <- x %>% spread(key = year, value = absenteeism_rate)
-# tablify(xt)
-cols <- c('darkorange', 'darkgreen')
-ggplot(data = x %>% mutate(year = factor(year)),
-       aes(x = year,
-           y = absenteeism_rate,
-           color = district,
-           group = district)) +
-  geom_point() +
-  geom_line() +
-  theme_paper() +
-  scale_color_manual(name = '',
-                     values = cols) +
-  ylim(0, max(x$absenteeism_rate) * 1.05) +
-  labs(x = 'Year',
-       y = 'Absenteeism rate') +
-  geom_label_repel(aes(label = paste0(round(absenteeism_rate, 2), '%')),
-                   show.legend = FALSE)
+kablify(clean_names(pretty_regression(fit4b,
+                               remove = '!grepl("school", Term)')),
+        size = 14)
+```
+
+## Event study
+
+The below shows the regression outputs for our event study model.
+
+```{r}
+x <- clean_names(pretty_regression(fit5b))
+x <- x %>% filter(Key == 'Estimate')
+kablify(x, size = 14)
+```
+
+As with OLS, we run the same model, but only for mathematics.
+
+```{r}
+kablify(clean_names(pretty_regression(fit6b,
+                               remove = '!grepl("school", Term)')),
+        size = 14)
 ```
 
 
-# Discussion
+The below is a visualization of the event study model's coefficients. Though time has an effect on performance in the pre-intervention period, this effect is not significant (as indicated by the p-value for each year-trimester); as would be expected as the result of the intervention, the effect is significant for all three post-intervention trimesters.
+
+
+```{r}
+model_data <- performance %>%
+  mutate(pass = ifelse(value >= 10, 1, 0),
+         interv = ifelse(district == 'Magude', 'Intervention', 'Control'),
+         after = ifelse(year == 2016, 'After', 'Before'),
+         interv_after = year == 2016 & district == 'Magude') %>%
+  mutate(intervention = interv)
+
+
+# Final piece = pass examination
+time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
+                      trimester = as.character(rep(1:3, 2)),
+                      time = -3:2)
+model_data <- 
+  model_data %>%
+  left_join(time_df) %>%
+  mutate(intervention = ifelse(intervention == 'Intervention', 1, 0)) %>%
+  mutate(timeinterv = time * as.numeric(intervention)) %>%
+  mutate(timetreat = factor(timeinterv)) %>%
+  mutate(period = factor(time))
+fit <- lm(pass ~ intervention + period  + timetreat + school + subject, data = model_data)
+fit <- broom::tidy(fit)
+fit <- fit %>%
+  filter(grepl('timetreat', term))
+fit$term <- factor(fit$term, 
+                   levels = fit$term)
+
+fit <- fit %>% mutate(trimester = 2:6) %>%
+  dplyr::select(trimester, estimate, p.value)
+row1 <- data_frame(trimester = 1,
+                   estimate = 0,
+                   p.value = NA)
+fit <- bind_rows(row1, fit)
+fit$trimester <- paste0(rep(c(2015, 2016), each = 3),
+                        '-',
+                        rep(1:3, 2))
+# fit <- fit %>% filter(trimester != '2015-1')
+ggplot(data = fit,
+       aes(x = trimester,
+           y = estimate,
+           group = 1)) +
+  geom_line(alpha = 0.2,
+            lwd = 1,
+            lty = 2) +
+  geom_point(alpha = 0.6, size = 4,
+            aes(color = p.value)) +
+  geom_vline(xintercept = 3.0,
+             color = 'darkred',
+             alpha = 0.6,
+             lty = 2) +
+  theme_publication() +
+  labs(x = 'Trimester',
+       y = 'Estimate',
+       title = 'Place-time interaction',
+       subtitle = 'Clear effect of intervention')
+```
+
+## Absenteeism analysis
+
+For our analysis of absenteeism, we construct a binomial logistic regression to estimate the odds or absence as a function of the intervention (interaction of time and place), along with the same potential confounders previously mentioned (excluding subject, which is no longer applicable).
+
+```{r}
+model_data <- ab %>%
+  mutate(interv = ifelse(district == 'Magude', 'Intervention', 'Control'),
+         after = ifelse(year == 2016, 'After', 'Before'),
+         interv_after = year == 2016 & district == 'Magude') %>%
+  mutate(intervention = interv) %>%
+  mutate(trimester = term)
+
+
+# Final piece = pass examination
+time_df <- data_frame(year = rep(c(2015, 2016), each = 3),
+                      trimester = as.character(rep(1:3, 2)),
+                      time = -3:2)
+model_data <- 
+  model_data %>%
+  left_join(time_df) %>%
+  mutate(intervention = ifelse(intervention == 'Intervention', 1, 0)) %>%
+  mutate(timeinterv = time * as.numeric(intervention)) %>%
+  mutate(timetreat = factor(timeinterv)) %>%
+  mutate(period = factor(time))
+```
+
+### Simple logistic
+
+The below shows the output of a simple binomial logistic regression for the overal (not trimester-specific) effect of the intervention.
+
+```{r}
+fit_ab <- glm(absent ~ intervention + interv_after + school, data = model_data)
+
+if('cia.RData' %in% dir()){
+  load('cia.RData')
+} else {
+  cia <- confint(fit_ab)
+  save(cia, file = 'cia.RData')
+}
+ci <- data.frame(cia)
+names(ci) <- c('lwr', 'upr')
+ci$term <- row.names(ci)
+
+tb <- broom::tidy(fit_ab)
+tb <- left_join(tb, ci)
+
+# Convert to odds ratios
+tb$or <- exp(tb$estimate)
+tb$lwr <- exp(tb$lwr); tb$upr <- exp(tb$upr)
+
+# Keep only useful columns
+tb <- tb %>%
+  dplyr::select(term,
+                estimate, 
+                std.error,
+                or,
+                lwr, 
+                upr, 
+                p.value)
+for (j in 2:ncol(tb)){
+  tb[,j] <- round(tb[,j], digits = 3)
+}
+kablify(tb, size = 14)
+or <- tb$or[tb$term == 'interv_afterTRUE']
+or_ci <- as.numeric(tb[tb$term == 'interv_afterTRUE', c('lwr', 'upr')])
+reduction <- round((1 - or) * 100, digits = 2)
+reduction_ci <- rev(round((1 - or_ci) * 100, digits = 2))
+reduction_text <- paste0(reduction, '% (95% confidence interval of ', reduction_ci[1],
+                         ' % to ', reduction_ci[2], '%)', collapse = '')
+```
+
+**Adjusted for school, the overall effect of the intervention was the reduction in the odds of absence by `r reduction_text`.**
+
+
+### Event study
+
+The below shows the output of our binomial logistic regression for event study.
+
+```{r}
+fit_ab <- glm(absent ~ intervention + period  + timetreat + school, data = model_data)
+
+if('ci.RData' %in% dir()){
+  load('ci.RData')
+} else {
+  ci <- confint(fit_ab)
+  save(ci, file = 'ci.RData')
+}
+ci <- data.frame(ci)
+names(ci) <- c('lwr', 'upr')
+ci$term <- row.names(ci)
+
+tb <- broom::tidy(fit_ab)
+tb <- left_join(tb, ci)
+
+# Convert to odds ratios
+tb$or <- exp(tb$estimate)
+tb$lwr <- exp(tb$lwr); tb$upr <- exp(tb$upr)
+
+# Keep only useful columns
+tb <- tb %>%
+  dplyr::select(term,
+                estimate, 
+                std.error,
+                or,
+                lwr, 
+                upr, 
+                p.value)
+for (j in 2:ncol(tb)){
+  tb[,j] <- round(tb[,j], digits = 3)
+}
+kablify(tb, size = 14)
+```
+
+Below is a visualization of the effect of the interaction of time and place (a replication of event-study, but specifically for odds ratios for absence).
+
+```{r}
+x <- tb %>%
+  filter(grepl('timetreat', term))
+x$trimester <- c(2:6)
+x <- x %>%
+  dplyr::select(trimester, or, lwr, upr)
+row1 <- data.frame(trimester = 1,
+                   or = 1,
+                   lwr = 1,
+                   upr = 1)
+x <- bind_rows(row1, x)
+x$trimester <- paste0(rep(2015:2016, each = 3), '-', ifelse(x$trimester > 3, x$trimester - 3, x$trimester))
+ggplot(data = x) +
+  geom_point(aes(x = trimester,
+                 y = or)) +
+  geom_errorbar(aes(x = trimester,
+                      ymin = lwr,
+                    ymax = upr)) +
+  labs(x = 'Trimester',
+       y = 'Odds ratio') +
+  geom_hline(yintercept = 1,
+             alpha = 0.6,
+             lty = 2) +
+  theme_publication()
+```
+
+# Discussion / Conclusion
+
 
 The campaign was associated with a reduction in absenteeism and an improvement in grades. Bla bla bla.
 

@@ -12,11 +12,14 @@ tablify <- function(x, n = 5){
                   pageLength = n, 
                   dom = 'tip'))
 }
-kablify <- function(x, size = 16){
-  kable(x) %>% 
-    kable_styling(bootstrap_options = c("striped",
-                                        "hover",
-                                        "condensed"),
+kablify <- function(x, size = 10, caption =''){
+  kable(x, format = "html", caption = caption) %>% 
+    kable_styling(#bootstrap_options = c("striped",
+                                        # "hover",
+                                        # "condensed"),
                   font_size = size,
-                  position = 'float_left')
+                  bootstrap_options = "striped",
+                  # position = 'float_left',
+                  # latex_options = c("striped", "hold_position"),
+                  full_width = F)
 }
