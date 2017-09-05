@@ -1084,7 +1084,7 @@ model_data <-
 #             eligibles = length(absent)) %>%
 #   ungroup %>%
 #   mutate(absenteeism_rate = absences / eligibles * 100)
-fit <- lm(absence ~ + timetreat, data = model_data)
+fit <- lm(absent ~ + timetreat, data = model_data)
 # Get confidence intervals
 ci <- confint(fit)
 ci <- data.frame(ci)
