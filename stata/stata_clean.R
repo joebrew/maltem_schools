@@ -98,3 +98,5 @@ ab$flag <-
   ab$flag_less_than_8_students_in_turma_this_year |
   ab$flag_too_many_consecutive_absences_or_presences
 
+# write
+write_csv(ab, 'stata/ab_01_flagged.csv')
