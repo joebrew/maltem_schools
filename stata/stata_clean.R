@@ -32,7 +32,7 @@ ab <- ab %>%
   mutate(flag_less_than_8_students_in_turma_this_year = max_students_year < 8) %>%
   group_by(school, turma, date) %>%
   mutate(n_eligibles = length(unique(name))) %>%
-  mutate(flag_fewer_than_half_of_eligible_students_were_recorded_today = n_eligibles < (0.5 * max_students_year) & flag_less_than_8_students_in_turma_this_year) %>%
+  mutate(flag_fewer_than_half_of_eligible_students_were_recorded_today = n_eligibles < (0.5 * max_students_year)) %>%
   ungroup 
 
 # Identify those unlikely chains of presences
