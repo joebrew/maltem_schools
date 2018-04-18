@@ -1,5 +1,5 @@
 # This script is an intermediary script in Laia's cleaning process (in stata).
-# It has nothing to do with the flow here.
+# It has nothing to do with the R flow in prepare_student_data.R.
 
 library(tidyverse)
 
